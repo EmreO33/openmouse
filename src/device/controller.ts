@@ -23,7 +23,7 @@ import {
   withPendingChanges,
   type PendingChange,
 } from "../pending-changes";
-import { deviceImage, loadCrowdArtworkCache, refreshCrowdArtworkCache } from "../ui/device-images";
+import { deviceImage } from "../ui/device-images";
 import { batteryNeedsCharging } from "../ui/battery-icon";
 import {
   isVxeR1SePlusReceiver,
@@ -370,17 +370,6 @@ function batch(run: () => void): void {
 
 export function getActiveDevice(): HIDDevice | null {
   return activeDevice;
-}
-
-export async function refreshArtwork(): Promise<void> {
-  // Re-fetch the crowd-artwork list before invalidating the memoized key —
-  // otherwise a just-uploaded image stays on the placeholder until the page
-  // is reloaded, since the cache this reads from is normally populated once
-  // at startup and never touched again.
-  await refreshCrowdArtworkCache();
-  artworkKey = null;
-  artworkValue = null;
-  emit();
 }
 
 function buildProfileView(): ProfileView {
@@ -4203,15 +4192,6 @@ async function showFixturePreview(name: PreviewMode): Promise<void> {
 
 export function start(): void {
   startHidCapture();
-  // A device can connect and render its (placeholder) artwork before this
-  // resolves — nothing here forced a re-render once it did, so the panel
-  // stayed on the placeholder until some unrelated status update happened
-  // to trigger one. Re-render as soon as the crowd list is actually in.
-  void loadCrowdArtworkCache().then(() => {
-    artworkKey = null;
-    artworkValue = null;
-    emit();
-  });
   onPendingChanges(() => {
     if (!isPendingChange(BUNNY_HOP_KEY)) stagedBunnyHopMs = null;
     if (!isPendingChange(PROFILE_RATE_KEY)) stagedProfileRates = { wireless: null, wired: null };

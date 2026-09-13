@@ -18,84 +18,7 @@
  * build time, so the panel drops the thumbnail on that error and keeps the
  * layout it had before any art existed. See `public/devices/README.md` for
  * how to upload new art.
- *
- * Crowd-sourced artworks are fetched from `/api/artwork/list` and cached
- * locally. Once a device has crowd-sourced artwork, it takes priority over
- * the name-fallback regexes below.
  */
-
-/** Matches upload.js's slug exactly — the two must agree for the lookup to ever hit. */
-function slugifyName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-
-/**
- * Crowd-sourced artwork cache, keyed by the same name slug as the built-in
- * art below — never by VID:PID, for the same reason: an id is not always
- * unique to one physical product. Populated asynchronously on app load from
- * `/api/artwork/list`. Once loaded, checked synchronously in `deviceImage`
- * before the name-fallback regexes.
- */
-let crowdArtworkCache: Map<string, string> | null = null;
-let crowdArtworkPromise: Promise<void> | null = null;
-
-async function fetchCrowdArtworkMap(bypassHttpCache = false): Promise<Map<string, string> | null> {
-  try {
-    // /api/artwork/list is served with a 5-minute Cache-Control so normal
-    // page loads are cheap, but that means a plain fetch() right after an
-    // upload can still be answered from the browser's HTTP cache with the
-    // pre-upload list. refreshCrowdArtworkCache needs a real network hit.
-    const response = await fetch(bypassHttpCache ? "/api/artwork/list?fresh=1" : "/api/artwork/list", {
-      headers: { Accept: "application/json" },
-      cache: bypassHttpCache ? "no-store" : "default",
-    });
-    if (!response.ok) return null;
-    const text = await response.text();
-    if (!text) return null;
-    const data = JSON.parse(text);
-    if (!Array.isArray(data.artworks)) return null;
-
-    const map = new Map<string, string>();
-    for (const entry of data.artworks) {
-      if (typeof entry.nameSlug === "string" && entry.nameSlug && typeof entry.filename === "string") {
-        map.set(entry.nameSlug, entry.filename);
-      }
-    }
-    return map;
-  } catch {
-    // Network error — continue without crowd art
-    return null;
-  }
-}
-
-export async function loadCrowdArtworkCache(): Promise<void> {
-  if (crowdArtworkCache) return;
-  if (crowdArtworkPromise) return crowdArtworkPromise;
-
-  crowdArtworkPromise = (async () => {
-    const map = await fetchCrowdArtworkMap();
-    if (map) crowdArtworkCache = map;
-  })();
-
-  return crowdArtworkPromise;
-}
-
-/**
- * Forces a fresh fetch of the crowd-artwork list, replacing the cache in
- * place. Call this right after a successful upload — otherwise the uploader
- * keeps seeing the placeholder until they reload, since `loadCrowdArtworkCache`
- * is a no-op once the cache has been populated once.
- */
-export async function refreshCrowdArtworkCache(): Promise<void> {
-  crowdArtworkPromise = null;
-  const map = await fetchCrowdArtworkMap(true);
-  if (map) crowdArtworkCache = map;
-}
-
-export function hasCrowdArtwork(displayName: string): boolean {
-  if (!crowdArtworkCache) return false;
-  return crowdArtworkCache.has(slugifyName(displayName));
-}
 
 function resolveDeviceImageFilename(_device: HIDDevice | null | undefined, displayName = ""): string {
   // Lightspeed receivers are shared product IDs, so paired G502 X variants
@@ -111,6 +34,11 @@ function resolveDeviceImageFilename(_device: HIDDevice | null | undefined, displ
   if (/\bpro\s*x\s*wireless\b/i.test(displayName)) return "logitech-pro-x-superlight-2c.png";
   if (/mx\s*master\s*4/i.test(displayName)) return "unknown-device.png";
   if (/superstrike/i.test(displayName)) return "logitech-pro-x2-superstrike.png";
+  // PRO X SUPERLIGHT 2 SE is temporarily excluded from the shared Superlight
+  // render so the artwork-request flow can be exercised (the "Request Artwork"
+  // button only shows for devices without art). Removes to the placeholder
+  // until its own render lands.
+  if (/\bsuperlight\s*2\s*se\b/i.test(displayName)) return "unknown-device.png";
   if (/superlight/i.test(displayName)) return "logitech-pro-x-superlight-2c.png";
   if (/op1we/i.test(displayName)) return "endgame-gear-op1we.png";
   if (/\bop1\b/i.test(displayName)) return "endgame-gear-op1-8k.png";
@@ -240,17 +168,30 @@ function resolveDeviceImageFilename(_device: HIDDevice | null | undefined, displ
  */
 const DEVICE_IMAGE_BASE_URL = "https://img.openmouse.app/";
 
+/**
+ * TEMPORARY local override — see `public/devices/README.md` →
+ * `attackshark-r2.png`. The real Attack Shark R2 render is checked into the
+ * repo (`public/devices/attackshark-r2.png`, served at `/devices/...`) so the
+ * panel shows correct art while the R2 upload awaits. Once the file is up in
+ * the bucket, delete this map, the file under `public/devices/`, and the
+ * README note.
+ */
+const LOCAL_OVERRIDES: Readonly<Record<string, string>> = {
+  "attackshark-r2.png": "/devices/attackshark-r2.png",
+};
+
 export function deviceImage(device: HIDDevice | null | undefined, displayName = ""): string {
-  // Crowd-sourced artwork takes priority, looked up by the device's own name
-  // — never by VID:PID, since an id is not always unique to one physical
-  // product. No name (not yet connected/read) or no match falls through to
-  // resolveDeviceImageFilename's name-based checks, same as it already does
-  // when there's no crowd art at all.
-  if (crowdArtworkCache && displayName) {
-    const crowdFilename = crowdArtworkCache.get(slugifyName(displayName));
-    if (crowdFilename) return DEVICE_IMAGE_BASE_URL + `crowd/${crowdFilename}`;
-  }
-  return DEVICE_IMAGE_BASE_URL + resolveDeviceImageFilename(device, displayName);
+  const filename = resolveDeviceImageFilename(device, displayName);
+  return LOCAL_OVERRIDES[filename] ?? DEVICE_IMAGE_BASE_URL + filename;
+}
+
+/**
+ * The bare filename a device's artwork resolves to (no bucket URL). Lets
+ * callers detect placeholder-bound devices without importing the resolver's
+ * internals.
+ */
+export function deviceImageFilename(displayName = ""): string {
+  return resolveDeviceImageFilename(null, displayName);
 }
 
 /**
@@ -287,7 +228,5 @@ export function showcaseDeviceImageUrls(): readonly string[] {
 export const UNKNOWN_DEVICE_FILENAME = "unknown-device.png";
 
 export function isUnknownDevice(device: HIDDevice | null | undefined, displayName = ""): boolean {
-  // If crowd art exists, it's not unknown
-  if (crowdArtworkCache && displayName && crowdArtworkCache.has(slugifyName(displayName))) return false;
   return resolveDeviceImageFilename(device, displayName) === UNKNOWN_DEVICE_FILENAME;
 }

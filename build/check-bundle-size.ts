@@ -82,6 +82,9 @@ const BUDGET_BYTES: Record<string, number> = {
   // artwork-storage.ts (R2 API fetch + localStorage cache), Cloudflare
   // Functions for R2 list/upload endpoints, and artwork.* i18n keys
   // across all nine locale tables. Measured aggregate is ~1,305.5 kB.
+  // That system was fully removed later (unmoderated anonymous uploads
+  // were abused to overwrite device art); the budget stays, and the
+  // aggregate only shrank.
   // Raised to 1,345 kB for the in-app Mouse Test page: MouseTestPage.tsx
   // (live polling-rate sampler, rolling chart canvas, DPI/battery device
   // card, button tester), its Activity nav icon, and the test.* i18n keys

@@ -3,6 +3,7 @@ import * as control from "../device/controller";
 import { ensureLocale } from "../i18n";
 import { interfaceThemeSlug } from "../interface-preferences";
 import { AppSidebar, type DesktopPage } from "./AppSidebar";
+import { ArtworkRequestDialog } from "./ArtworkRequestDialog";
 import { OverviewPage } from "./OverviewPage";
 import { CaptureDialog } from "./CaptureDialog";
 import { FeedbackDialog } from "./FeedbackDialog";
@@ -22,6 +23,8 @@ export function App(): ReactNode {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [shareProfileOpen, setShareProfileOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [artworkReqOpen, setArtworkReqOpen] = useState(false);
+  const [artworkDeviceName, setArtworkDeviceName] = useState("");
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [page, setPage] = useState<DesktopPage>("home");
   const { preferences, status } = snapshot;
@@ -67,6 +70,11 @@ export function App(): ReactNode {
     panel.current?.scrollTo({ top: 0, behavior: preferences.reducedMotion ? "auto" : "smooth" });
   }, [page, snapshot.workspaceTab, preferences.reducedMotion]);
 
+  function openArtworkRequest(): void {
+    if (snapshot.status?.name) setArtworkDeviceName(snapshot.status.name);
+    setArtworkReqOpen(true);
+  }
+
   function navigate(next: DesktopPage): void {
     if (next === "settings") {
       control.openInterfaceSettings();
@@ -98,7 +106,7 @@ export function App(): ReactNode {
       data-interface-theme={interfaceThemeSlug(preferences.theme)}
     >
       <NewsBanner locale={locale} />
-      <AppSidebar snapshot={snapshot} page={resolvedPage} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
+      <AppSidebar snapshot={snapshot} page={resolvedPage} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} onOpenArtworkRequest={openArtworkRequest} />
 
       <main className="full-desktop-main">
         <div className="full-desktop-content" ref={panel}>
@@ -122,6 +130,7 @@ export function App(): ReactNode {
 
       <CaptureDialog open={captureOpen} onClose={() => setCaptureOpen(false)} locale={locale} />
       <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} locale={locale} canAttachDiagnostics={status !== null} />
+      <ArtworkRequestDialog open={artworkReqOpen} onClose={() => setArtworkReqOpen(false)} locale={locale} deviceName={artworkDeviceName} />
       <WhatsNewDialog open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} locale={locale} />
       <ShareProfileDialog open={shareProfileOpen} onClose={() => setShareProfileOpen(false)} snapshot={snapshot} />
       <AiOverlay locale={locale} />

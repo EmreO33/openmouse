@@ -52,7 +52,7 @@ test("the guard blocks exploit URLs and counts a strike", async () => {
 
 test("the guard blocks cross-site POSTs", async () => {
   const response = await guarded(
-    new Request("https://openmouse.app/api/artwork/upload", {
+    new Request("https://openmouse.app/api/feedback", {
       method: "POST",
       headers: { Origin: "https://attacker.example" },
     }),
@@ -62,7 +62,7 @@ test("the guard blocks cross-site POSTs", async () => {
 
 test("the guard allows same-origin POSTs", async () => {
   const response = await guarded(
-    new Request("https://openmouse.app/api/artwork/upload", {
+    new Request("https://openmouse.app/api/feedback", {
       method: "POST",
       headers: { Origin: "https://openmouse.app" },
     }),
@@ -72,7 +72,7 @@ test("the guard allows same-origin POSTs", async () => {
 
 test("the guard rejects oversized POST bodies", async () => {
   const response = await guarded(
-    new Request("https://openmouse.app/api/artwork/upload", {
+    new Request("https://openmouse.app/api/feedback", {
       method: "POST",
       headers: { "Content-Length": String(9 * 1024 * 1024) },
     }),

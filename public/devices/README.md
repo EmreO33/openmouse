@@ -112,14 +112,38 @@ a public release package.
 for Zaunkoenig M3K and is also used for the M2K entry. Confirm redistribution
 terms before including it in a public release package.
 
-`attackshark-r2.png` — **needs a maintainer upload.** The name-fallback
-mapping in `src/ui/device-images.ts` is in place (keyed on the reported name
-"Attack Shark R2", since PID 0x402D is shared with the Lingbao M5 Pro) and
-falls back to the placeholder until the file lands. Suggested source: the
-top-down render on Attack Shark's own product page
-(`attackshark.com/products/attack-shark-r2-magnesium-alloy-paw3950-gaming-mouse-8k`)
-or Shopify CDN, keyed out of its backdrop. Vendor product art — treat as a
-request pending licensing review.
+`attackshark-r2.png` — the name-fallback mapping in `src/ui/device-images.ts`
+is in place (keyed on the reported name "Attack Shark R2", since PID 0x402D is
+shared with the Lingbao M5 Pro). The render was supplied from igEEKJO's
+product page (`igeekjo.com` Shopify CDN,
+`.../files/download_fc6e45b7-7ddb-40ad-89da-e75cab39120a.jpg`, fetched
+2026), keyed out of its white backdrop and centered on a transparent 700×700
+canvas.
+
+**TEMPORARY checked-in copy.** To fix the overwritten artwork immediately,
+the normalized `attackshark-r2.png` is committed at
+`public/devices/attackshark-r2.png` and served from the repo via the
+`LOCAL_OVERRIDES` map in `src/ui/device-images.ts` (it returns
+`/devices/attackshark-r2.png` instead of the R2 URL). This is a stopgap, not
+the final home. Until this file is in the bucket, the panel shows the repo
+copy; an earlier unmoderated crowd upload overwrote the bucket entry with
+unrelated artwork (a dog photo), which is why the bucket file must not be
+trusted.
+
+**Maintainer TODO (do once, then remove the stopgap):**
+1. Upload the real render to the bucket:
+   ```bash
+   npx wrangler r2 object put openmouse-devices/attackshark-r2.png --file=public/devices/attackshark-r2.png --remote
+   ```
+2. Delete the leftover crowd objects (the dog picture lives under the `crowd/`
+   prefix): in the Cloudflare dashboard, R2 → `openmouse-devices` → `crowd/` →
+   select all → Delete, or delete each key with
+   `npx wrangler r2 object delete openmouse-devices/crowd/<key>`.
+3. Remove the stopgap: delete `LOCAL_OVERRIDES` from `src/ui/device-images.ts`,
+   delete `public/devices/attackshark-r2.png`, and flip
+   `device-images.test.ts` back to asserting `CDN + "attackshark-r2.png"`.
+4. Keep this note as provenance. Vendor product art — treat as a request
+   pending licensing review.
 
 `attackshark-r5-ultra.png` is the top-down render of the Attack Shark R5 Ultra
 extracted from Attack Shark's official product gallery

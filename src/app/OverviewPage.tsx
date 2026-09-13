@@ -9,7 +9,6 @@ import {
   Plus,
   Settings2,
   Share2,
-  Upload,
   Wifi,
   type LucideIcon,
 } from "lucide-react";
@@ -50,9 +49,8 @@ import {
 } from "./cards/AdvancedCards";
 import { cardAvailability } from "./cards/availability";
 import { TeevolutionProfileCard } from "./cards/teevolution/ProfileCard";
-import { deviceImage, isUnknownDevice, showcaseDeviceImageUrls } from "../ui/device-images";
+import { deviceImage, showcaseDeviceImageUrls } from "../ui/device-images";
 import { BatteryIcon } from "./ui";
-import { ArtworkUploadDialog } from "./ArtworkUploadDialog";
 import { availableWorkspaceTab, availableWorkspaceTabs } from "./workspace-tabs";
 
 function on(tab: WorkspaceTab, tabs: readonly WorkspaceTab[]): boolean {
@@ -78,16 +76,6 @@ function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
   if (!status) return null;
   const locale = snapshot.preferences.locale;
   const image = snapshot.deviceArtwork;
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [imageFailed, setImageFailed] = useState(false);
-
-  const activeDevice = control.getActiveDevice();
-  const needsArtwork = activeDevice && (
-    imageFailed || isUnknownDevice(
-      { vendorId: activeDevice.vendorId, productId: activeDevice.productId } as HIDDevice,
-      status.name,
-    )
-  );
 
   return (
     <div className="device-showcase">
@@ -101,7 +89,6 @@ function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
             onError={(event) => {
               event.currentTarget.onerror = null;
               event.currentTarget.src = deviceImage(null);
-              setImageFailed(true);
             }}
             alt={status.name}
           />
@@ -123,27 +110,6 @@ function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
           </span>
         ) : null}
       </div>
-      {needsArtwork ? (
-        <button
-          type="button"
-          className="artwork-upload-trigger"
-          onClick={() => setShowUploadDialog(true)}
-        >
-          <Upload size={14} strokeWidth={2.2} aria-hidden="true" />
-          {t(locale, "artwork.upload" as I18nKey)}
-        </button>
-      ) : null}
-      {activeDevice ? (
-        <ArtworkUploadDialog
-          isOpen={showUploadDialog}
-          onClose={() => setShowUploadDialog(false)}
-          locale={locale}
-          displayName={status.name}
-          onArtworkUploaded={() => {
-            control.refreshArtwork();
-          }}
-        />
-      ) : null}
     </div>
   );
 }

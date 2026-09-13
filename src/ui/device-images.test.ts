@@ -78,7 +78,10 @@ test("Dareu A950 PRO Mg resolves by name", () => {
 });
 
 test("Attack Shark R2 resolves by name (PID 0x402D is shared with the M5 Pro)", () => {
-  assert.equal(deviceImage(null, "Attack Shark R2"), CDN + "attackshark-r2.png");
+  // TEMPORARY: served from the repo override (see LOCAL_OVERRIDES in
+  // device-images.ts / public/devices/README.md) until a maintainer uploads
+  // attackshark-r2.png to R2; then it returns CDN + "attackshark-r2.png" again.
+  assert.equal(deviceImage(null, "Attack Shark R2"), "/devices/attackshark-r2.png");
   // The shared receiver PID must NOT resolve to the R2 render.
   assert.equal(
     deviceImage(dev(0x3151, 0x402d), "Lingbao M5 Pro"),
@@ -276,17 +279,6 @@ test("the wired product string resolves the same render as the read model", () =
   // string — "Esports G23V2Pro", no separators at all.
   assert.equal(deviceImage(null, "Esports G23V2Pro"), CDN + "incott-g23-v2-pro.png");
   assert.equal(deviceImage(null, "incott Esports G23V2Pro mouse"), CDN + "incott-g23-v2-pro.png");
-});
-
-test("Incott crowd art is keyed by model name like everything else", () => {
-  // All six families enumerate under the same two product ids, so a crowd
-  // upload keyed by name (not id) is what keeps one model's art from being
-  // served to every other model.
-  assert.equal(
-    deviceImage(dev(0x093a, 0x522c), "Ghero"),
-    CDN + "incott-ghero.png",
-    "no crowd art loaded in tests, so it falls through to the name rule",
-  );
 });
 
 test("Incott names do not collide with other brands' renders", () => {
