@@ -3,6 +3,7 @@ import {
   BarChart3,
   Clock,
   Gauge,
+  ImageUp,
   Layers,
   Lightbulb,
   MousePointerClick,
@@ -49,7 +50,7 @@ import {
 } from "./cards/AdvancedCards";
 import { cardAvailability } from "./cards/availability";
 import { TeevolutionProfileCard } from "./cards/teevolution/ProfileCard";
-import { deviceImage, showcaseDeviceImageUrls } from "../ui/device-images";
+import { deviceImage, isUnknownDevice, showcaseDeviceImageUrls } from "../ui/device-images";
 import { BatteryIcon } from "./ui";
 import { availableWorkspaceTab, availableWorkspaceTabs } from "./workspace-tabs";
 
@@ -71,11 +72,23 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): ReactNode {
   return <Icon size={13} strokeWidth={1.8} aria-hidden="true" />;
 }
 
-function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+function DeviceShowcase({ snapshot, onRequestArtwork }: {
+  snapshot: ControlSnapshot;
+  onRequestArtwork: () => void;
+}): ReactNode {
   const status = snapshot.status;
   if (!status) return null;
   const locale = snapshot.preferences.locale;
   const image = snapshot.deviceArtwork;
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const activeDevice = control.getActiveDevice();
+  const needsArtwork = activeDevice && (
+    imageFailed || isUnknownDevice(
+      { vendorId: activeDevice.vendorId, productId: activeDevice.productId } as HIDDevice,
+      status.name,
+    )
+  );
 
   return (
     <div className="device-showcase">
@@ -89,6 +102,7 @@ function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
             onError={(event) => {
               event.currentTarget.onerror = null;
               event.currentTarget.src = deviceImage(null);
+              setImageFailed(true);
             }}
             alt={status.name}
           />
@@ -110,6 +124,16 @@ function DeviceShowcase({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
           </span>
         ) : null}
       </div>
+      {needsArtwork ? (
+        <button
+          type="button"
+          className="artwork-upload-trigger"
+          onClick={onRequestArtwork}
+        >
+          <ImageUp size={14} strokeWidth={2.2} aria-hidden="true" />
+          {t(locale, "artreq.request" as I18nKey)}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -279,14 +303,17 @@ function OverviewEmpty({ snapshot, compact = false }: { snapshot: ControlSnapsho
   );
 }
 
-function OverviewContent({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+function OverviewContent({ snapshot, onRequestArtwork }: {
+  snapshot: ControlSnapshot;
+  onRequestArtwork: () => void;
+}): ReactNode {
   const status = snapshot.status;
   if (!status) return <OverviewEmpty snapshot={snapshot} />;
   const has = cardAvailability(snapshot);
   const powerOverview = status.ui?.powerOverview === true;
   return (
     <>
-      <DeviceShowcase snapshot={snapshot} />
+      <DeviceShowcase snapshot={snapshot} onRequestArtwork={onRequestArtwork} />
       <DeviceInfoGrid snapshot={snapshot} />
       {powerOverview && (has.teevolutionDpiLighting || has.sleep) ? (
         <section id="power-overview-settings" className="settings-grid device-data" aria-label="Power settings">
@@ -301,9 +328,11 @@ function OverviewContent({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
 export function Workspace({
   snapshot,
   onOpenCapture,
+  onRequestArtwork,
 }: {
   snapshot: ControlSnapshot;
   onOpenCapture: () => void;
+  onRequestArtwork: () => void;
 }): ReactNode {
   const status = snapshot.status;
   const tab = snapshot.workspaceTab;
@@ -387,7 +416,7 @@ export function Workspace({
 
   return (
     <>
-      {showOverview ? <OverviewContent snapshot={snapshot} /> : null}
+      {showOverview ? <OverviewContent snapshot={snapshot} onRequestArtwork={onRequestArtwork} /> : null}
 
       {!anyPanel ? (
         <section id="workspace-tab-empty" className="workspace-tab-empty device-data" role="tabpanel">
@@ -565,10 +594,12 @@ export function OverviewPage({
   snapshot,
   onOpenCapture,
   onShareProfile,
+  onRequestArtwork,
 }: {
   snapshot: ControlSnapshot;
   onOpenCapture: () => void;
   onShareProfile: () => void;
+  onRequestArtwork: () => void;
 }): ReactNode {
   const status = snapshot.status;
   const panel = useRef<HTMLElement>(null);
@@ -650,7 +681,7 @@ export function OverviewPage({
             </button>
           </nav>
 
-          <Workspace snapshot={workspaceSnapshot} onOpenCapture={onOpenCapture} />
+          <Workspace snapshot={workspaceSnapshot} onOpenCapture={onOpenCapture} onRequestArtwork={onRequestArtwork} />
         </>
       ) : (
         <DeviceListView snapshot={snapshot} />

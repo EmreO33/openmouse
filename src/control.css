@@ -1811,6 +1811,33 @@ body { height: 100vh; overflow: hidden; }
   background: var(--success);
 }
 
+/* Artwork request trigger button (missing-art devices) */
+.artwork-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: color-mix(in srgb, var(--ui-accent) 12%, var(--surface-panel-strong));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--bright);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+.artwork-upload-trigger:hover {
+  background: color-mix(in srgb, var(--ui-accent) 20%, var(--surface-panel-strong));
+  border-color: var(--ui-accent);
+}
+.artwork-upload-trigger:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 1px;
+}
+
 /* Info sections (Current status / device information) */
 .info-section {
   border: 1px solid var(--border);

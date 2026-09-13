@@ -34,11 +34,6 @@ function resolveDeviceImageFilename(_device: HIDDevice | null | undefined, displ
   if (/\bpro\s*x\s*wireless\b/i.test(displayName)) return "logitech-pro-x-superlight-2c.png";
   if (/mx\s*master\s*4/i.test(displayName)) return "unknown-device.png";
   if (/superstrike/i.test(displayName)) return "logitech-pro-x2-superstrike.png";
-  // PRO X SUPERLIGHT 2 SE is temporarily excluded from the shared Superlight
-  // render so the artwork-request flow can be exercised (the "Request Artwork"
-  // button only shows for devices without art). Removes to the placeholder
-  // until its own render lands.
-  if (/\bsuperlight\s*2\s*se\b/i.test(displayName)) return "unknown-device.png";
   if (/superlight/i.test(displayName)) return "logitech-pro-x-superlight-2c.png";
   if (/op1we/i.test(displayName)) return "endgame-gear-op1we.png";
   if (/\bop1\b/i.test(displayName)) return "endgame-gear-op1-8k.png";

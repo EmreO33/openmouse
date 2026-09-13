@@ -106,7 +106,7 @@ export function App(): ReactNode {
       data-interface-theme={interfaceThemeSlug(preferences.theme)}
     >
       <NewsBanner locale={locale} />
-      <AppSidebar snapshot={snapshot} page={resolvedPage} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} onOpenArtworkRequest={openArtworkRequest} />
+      <AppSidebar snapshot={snapshot} page={resolvedPage} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
 
       <main className="full-desktop-main">
         <div className="full-desktop-content" ref={panel}>
@@ -119,6 +119,7 @@ export function App(): ReactNode {
               snapshot={snapshot}
               onOpenCapture={() => setCaptureOpen(true)}
               onShareProfile={() => setShareProfileOpen(true)}
+              onRequestArtwork={openArtworkRequest}
             />
           )}
           <p className="app-live-region" role="status" aria-live="polite">

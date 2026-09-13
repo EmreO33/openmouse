@@ -1,8 +1,7 @@
-import { Activity, ChevronRight, FileText, House, ImageUp, MessageSquare, Mouse, Settings as SettingsIcon, Star, type LucideIcon } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Activity, ChevronRight, FileText, House, MessageSquare, Mouse, Settings as SettingsIcon, Star, type LucideIcon } from "lucide-react";
+import { type ReactNode } from "react";
 import type { ControlSnapshot } from "../device/types";
 import { t } from "../i18n";
-import { deviceImage, deviceImageFilename, UNKNOWN_DEVICE_FILENAME } from "../ui/device-images";
 
 export const OPENMOUSE_URL = "https://openmouse.app/";
 
@@ -16,48 +15,20 @@ function NavArrow(): ReactNode {
   return <ChevronRight className="app-sidebar-nav-arrow" size={18} strokeWidth={2.2} aria-hidden="true" />;
 }
 
-// A device counts as missing artwork either when its name has no render (it
-// resolves to the placeholder directly) or when the named file fails to load
-// from the bucket (the art was never uploaded). The <img> probe is used only
-// for the second case — it detects 404s cross-origin, which a HEAD fetch
-// cannot, and resolves to "missing" unless the image actually loads.
-function useArtworkMissing(deviceName: string): boolean {
-  const [missing, setMissing] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    setMissing(false);
-    if (!deviceName) return;
-    if (deviceImageFilename(deviceName) === UNKNOWN_DEVICE_FILENAME) {
-      setMissing(true);
-      return;
-    }
-    if (typeof Image === "undefined") return;
-    const probe = new Image();
-    probe.onload = () => { if (!cancelled) setMissing(false); };
-    probe.onerror = () => { if (!cancelled) setMissing(true); };
-    probe.src = deviceImage(null, deviceName);
-    return () => { cancelled = true; };
-  }, [deviceName]);
-  return missing;
-}
-
 export function AppSidebar({
   snapshot,
   page,
   onNavigate,
   onOpenFeedback,
   onOpenWhatsNew,
-  onOpenArtworkRequest,
 }: {
   snapshot: ControlSnapshot;
   page: DesktopPage;
   onNavigate: (page: DesktopPage) => void;
   onOpenFeedback: () => void;
   onOpenWhatsNew: () => void;
-  onOpenArtworkRequest: () => void;
 }): ReactNode {
   const locale = snapshot.preferences.locale;
-  const needsArtwork = useArtworkMissing(snapshot.status?.name ?? "");
   return (
     <aside className="app-sidebar">
       <div className="app-sidebar-top">
@@ -132,18 +103,6 @@ export function AppSidebar({
           <span className="app-sidebar-nav-label">{t(locale, "nav.whatsNew")}</span>
           <NavArrow />
         </button>
-        {needsArtwork ? (
-          <button
-            className="app-sidebar-nav-item"
-            type="button"
-            title={t(locale, "artreq.request")}
-            onClick={onOpenArtworkRequest}
-          >
-            <NavIcon icon={ImageUp} color="#a3e635" />
-            <span className="app-sidebar-nav-label">{t(locale, "artreq.request")}</span>
-            <NavArrow />
-          </button>
-        ) : null}
         <button
           className="app-sidebar-nav-item"
           type="button"
