@@ -149,6 +149,13 @@ export const vi: Record<I18nKey, string> = {
   "artreq.errorDetail": "Kiểm tra kết nối và thử lại.",
   "artreq.sizeError": "Ảnh quá lớn. Tối đa 5 MB.",
   "artreq.typeError": "Vui lòng chọn ảnh PNG hoặc WebP.",
+  "artreq.screened": "Ảnh tải lên sẽ được tự động kiểm tra nội dung không phù hợp.",
+  "artreq.rejected": "Không thể gửi ảnh này.",
+  "artreq.rejectedInvalid": "Tệp này không phải ảnh PNG hoặc WebP hợp lệ.",
+  "artreq.rejectedNsfw": "Đã phát hiện nội dung không phù hợp (NSFW).",
+  "artreq.rejectedHate": "Đã phát hiện nội dung thù ghét hoặc xúc phạm.",
+  "artreq.rejectedGore": "Đã phát hiện nội dung bạo lực hoặc đồ họa máu.",
+  "artreq.rejectedJunk": "Đây có vẻ không phải ảnh sản phẩm. Hãy tải lên ảnh cắt nền nhìn từ trên xuống của thiết bị.",
 
   "wn.title": "Ứng dụng OpenMouse Desktop",
   "wn.body": "Hiện đã có bản alpha của ứng dụng OpenMouse Desktop. Chạy OpenMouse bằng ứng dụng cài đặt riêng — không cần giữ tab trình duyệt mở. Ứng dụng hỗ trợ truy cập HID trực tiếp, profile theo game và giao diện thống nhất trên web lẫn desktop. Truy cập trang phát hành để tải xuống cho nền tảng của bạn.",

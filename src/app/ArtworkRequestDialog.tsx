@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as control from "../device/controller";
-import { t } from "../i18n";
+import { t, type I18nKey } from "../i18n";
 import type { InterfaceLocale } from "../interface-preferences";
 
 const MAX_ART_SIZE = 5 * 1024 * 1024;
 const MAX_NOTE_LENGTH = 600;
 const ACCEPTED_TYPES = ["image/png", "image/webp"] as const;
-const FEEDBACK_URL = "/api/feedback";
+const ARTWORK_URL = "/api/artwork";
+
+/** Server-side screening reasons (see functions/api/artwork.js) mapped to
+    localized messages. Anything unknown falls back to artreq.rejected. */
+const REJECT_KEYS: Record<string, I18nKey> = {
+  nsfw: "artreq.rejectedNsfw",
+  hate: "artreq.rejectedHate",
+  gore: "artreq.rejectedGore",
+  junk: "artreq.rejectedJunk",
+  invalid: "artreq.rejectedInvalid",
+};
 
 export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName = "" }: {
   open: boolean;
@@ -21,6 +31,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,6 +53,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
     setFileError(null);
     setNote("");
     setError(false);
+    setRejectReason(null);
   }, [open]);
 
   useEffect(() => {
@@ -56,6 +68,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
 
   function acceptFile(next: File | null | undefined): void {
     setFileError(null);
+    setRejectReason(null);
     if (!next) return;
     if (!(ACCEPTED_TYPES as readonly string[]).includes(next.type)) {
       setFileError(t(locale, "artreq.typeError"));
@@ -72,6 +85,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
     if (!file || busy) return;
     setBusy(true);
     setError(false);
+    setRejectReason(null);
     try {
       const ext = file.type === "image/png" ? "png" : "webp";
       const slug = (deviceName || "device")
@@ -95,7 +109,16 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
         }),
       );
       form.append("files[0]", file, filename);
-      const response = await fetch(FEEDBACK_URL, { method: "POST", body: form });
+      const response = await fetch(ARTWORK_URL, { method: "POST", body: form });
+      if (response.status === 422) {
+        const body: unknown = await response.json().catch(() => null);
+        const reason =
+          body && typeof body === "object" && "reason" in body
+            ? (body as { reason?: unknown }).reason
+            : null;
+        setRejectReason(typeof reason === "string" && REJECT_KEYS[reason] ? reason : "invalid");
+        return;
+      }
       if (!response.ok) throw new Error(String(response.status));
       control.pushToast("success", t(locale, "artreq.sent"), t(locale, "artreq.sentDetail"));
       onClose();
@@ -162,6 +185,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
           )}
         </div>
         <p className="artreq-hint">{t(locale, "artreq.hint")}</p>
+        <p className="artreq-hint">{t(locale, "artreq.screened")}</p>
 
         {fileError ? (
           <p className="feedback-error" role="alert">
@@ -182,7 +206,11 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
           />
         </label>
 
-        {error ? (
+        {rejectReason ? (
+          <p className="feedback-error" role="alert">
+            {t(locale, REJECT_KEYS[rejectReason] ?? "artreq.rejected")}
+          </p>
+        ) : error ? (
           <p className="feedback-error" role="alert">
             {t(locale, "artreq.error")} {t(locale, "artreq.errorDetail")}
           </p>
