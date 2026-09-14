@@ -204,13 +204,10 @@ export function SleepCard({ snapshot }: { snapshot: ControlSnapshot }): ReactNod
         {canDisable ? (
           <button
             id="sleep-toggle"
-            className="switch-button"
+            className={`switch-button${asleep ? " is-on" : ""}`}
             type="button"
             role="switch"
             aria-checked={asleep}
-            style={asleep
-              ? { background: "var(--ui-accent)", borderColor: "var(--ui-accent)", color: "var(--ui-accent-ink)" }
-              : { background: "#202023", borderColor: "#3a3a3f", color: "#8b8b90" }}
             onClick={() => control.toggleSleep(!asleep)}
           >
             {asleep ? t(locale, "common.on") : t(locale, "common.off")}

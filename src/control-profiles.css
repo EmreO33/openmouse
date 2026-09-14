@@ -19,11 +19,11 @@
 /* Marks settings stored in the selected onboard profile rather than globally,
    so it is clear which values follow the profile and which apply to the mouse
    as a whole. Global settings carry no badge. */
-.setting-scope { display:inline-block;margin-left:.5rem;padding:.12rem .38rem;border:1px solid var(--border);border-radius:999px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.53rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;white-space:nowrap }
+.setting-scope { display:inline-block;margin-left:.5rem;padding:.14rem .42rem;border:1px solid var(--border);border-radius:999px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;white-space:nowrap }
 .setting-heading h2 .setting-scope { position:relative;top:-.1em }
 
-/* Per-profile DPI slots. Each row is one slot: its number, X and Y DPI, and
-   the lift-off level stored alongside them in the same stage record. */
+/* Per-profile DPI slots. Each row is one slot: its number, a single DPI value,
+   and the lift-off level stored alongside it in the same stage record. */
 /* The slot count and its title sit together on the left, so the eye reads the
    label and the control it belongs to in one movement. The title uses the same
    overline treatment as the card headings above it. */
@@ -39,18 +39,12 @@
 
 .dpi-slot-list { display:grid;gap:.3rem;overflow:visible }
 /* One shared column template so the headings line up with the fields under
-   them: slot number, X, axis link, Y, lift-off. */
-.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 1.5rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
+   them: slot number, DPI, lift-off. */
+.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
 .dpi-slot-head { padding:0 0 .1rem;color:var(--text-faint);font-size:.53rem;letter-spacing:.06em;text-transform:uppercase }
 .dpi-slot-head span { padding-left:.15rem }
 .dpi-slot-row > button.dpi-slot-index { padding:.34rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;cursor:pointer }
 .dpi-slot-row.is-default > button.dpi-slot-index { border-color:var(--ui-accent);background:color-mix(in srgb, var(--ui-accent) 16%, var(--surface-raised));color:var(--ui-accent) }
-/* The link control sits between the two fields it joins, so the pairing is
-   read from the layout rather than from a label. */
-.dpi-axis-lock { display:flex;align-items:center;justify-content:center;padding:.3rem 0;border:0;background:none;color:var(--text-faint);cursor:pointer }
-.dpi-axis-lock:hover:not(:disabled) { color:var(--dim) }
-.dpi-axis-lock.is-locked { color:var(--ui-accent) }
-.dpi-axis-lock:disabled { opacity:.45;cursor:not-allowed }
 .dpi-slot-row input[type="number"] { width:100%;min-width:0;box-sizing:border-box;padding:.34rem .3rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised);color:var(--text-input);font-size:.66rem }
 .dpi-slot-row input[type="number"]:hover:not(:disabled) { border-color:var(--ghost) }
 .dpi-slot-row input[type="number"]:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
@@ -78,19 +72,18 @@
 /* Report rate as a slider with one stop per supported rate. */
 .rate-slider { display:grid;gap:.1rem }
 .rate-slider + .rate-slider { margin-top:.65rem }
-.rate-slider-head { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;color:var(--faint);font-size:.6rem }
+.rate-slider-head { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;color:var(--text-soft);font-size:.62rem }
 .rate-slider-head output { color:var(--text-input);font-family:'JetBrains Mono',monospace;font-size:.68rem }
-.rate-slider-input { width:100%;margin:0;accent-color:var(--ui-accent);cursor:pointer }
-.rate-slider-input:disabled { opacity:.5;cursor:not-allowed }
-.rate-slider-scale { position:relative;height:1.15rem;margin-top:.1rem }
-.rate-slider-scale i { position:absolute;top:0;width:5px;height:5px;border-radius:50%;background:var(--border);transform:translateX(-50%) }
-.rate-slider-scale i.is-on { background:var(--ui-accent) }
-.rate-slider-scale span { position:absolute;top:.45rem;transform:translateX(-50%);color:var(--ghost);font-family:'JetBrains Mono',monospace;font-size:.53rem;white-space:nowrap }
-.rate-slider-scale span.is-on { color:var(--text-input) }
+.rate-slider-buttons { display:flex;gap:.4rem }
+.rate-slider-buttons button { flex:1 1 0;min-width:2.5rem;padding:.6rem .3rem;border:1px solid var(--border);border-radius:8px;background:var(--surface-control);color:var(--text-soft);font:600 .74rem/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background .15s,color .15s,border-color .15s }
+.rate-slider-buttons button:hover:not(:disabled) { border-color:var(--line-strong);background:var(--surface-hover-soft);color:var(--text-hover) }
+.rate-slider-buttons button.is-on { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
+.rate-slider-buttons button.is-on:hover:not(:disabled) { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
+.rate-slider-buttons button:disabled { opacity:.5;cursor:not-allowed }
 
 /* The compact layout pins the settings grid to a 176px row. Five slot rows are
    far taller than that, so the grid falls back to sizing by content while the
-   slot editor is showing, the same way it does for the X/Y axis controls. */
+   slot editor is showing. */
 .control-shell .settings-grid.has-dpi-slots { grid-template-rows:minmax(176px,auto) }
 .control-shell .settings-grid.has-dpi-slots .dpi-card { grid-row:auto }
 
@@ -98,7 +91,7 @@
 .profile-button-heading { display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:.8rem }
 .profile-button-heading p { margin:0 0 .3rem;color:var(--faint);font-family:var(--font-mono);font-size:.55rem;letter-spacing:.09em }
 .profile-button-heading h2 { margin:0;color:var(--text-hover);font-size:1rem;font-weight:550 }
-.profile-button-heading small { display:block;margin-top:.25rem;color:var(--text-faint);font-size:.62rem }
+.profile-button-heading small { display:block;margin-top:.25rem;color:var(--text-soft);font-size:.64rem }
 .assignment-layer-tabs { display:flex;padding:.2rem;border:1px solid var(--border);border-radius:8px;background:var(--surface-control) }
 .assignment-layer-tabs button { min-width:5rem;padding:.38rem .55rem;border:0;border-radius:5px;background:transparent;color:var(--muted);font-size:.62rem;cursor:pointer }
 .assignment-layer-tabs button[aria-selected="true"] { background:var(--surface-raised);color:var(--ui-accent);box-shadow:0 1px 5px rgb(0 0 0 / 25%) }
@@ -118,7 +111,7 @@
 .shortcut-dialog:focus-visible { border-color:var(--ui-accent) }
 .shortcut-dialog-kicker { color:var(--ui-accent);font-family:var(--font-mono);font-size:.54rem;letter-spacing:.1em }
 .shortcut-dialog h3 { margin:.35rem 0 .3rem;color:var(--text-hover);font-size:1.05rem;font-weight:550 }
-.shortcut-dialog p { margin:0;color:var(--text-faint);font-size:.66rem;line-height:1.5 }
+.shortcut-dialog p { margin:0;color:var(--text-soft);font-size:.68rem;line-height:1.5 }
 .shortcut-record-button { display:flex;align-items:center;justify-content:center;gap:.45rem;width:100%;margin-top:1rem;padding:.55rem;border:1px solid var(--border-hover);border-radius:7px;background:var(--surface-control);color:var(--text-hover);font-size:.67rem;font-weight:650;cursor:pointer }
 .shortcut-record-button i { width:.55rem;height:.55rem;border-radius:50%;background:var(--destructive);box-shadow:0 0 0 3px color-mix(in srgb,var(--destructive) 12%,transparent) }
 .shortcut-record-button.is-recording { border-color:var(--destructive);color:color-mix(in srgb,var(--destructive) 68%,var(--text-hover)) }
@@ -132,7 +125,7 @@
 .shortcut-capture kbd { padding:.35rem .48rem;border:1px solid var(--border-hover);border-radius:5px;background:var(--surface-raised);color:var(--text-hover);font:600 .63rem var(--font-mono);box-shadow:0 2px 0 var(--border) }
 .shortcut-capture li small { color:var(--ghost);font-size:.48rem }
 .shortcut-error { display:block;color:var(--destructive);font-size:.62rem }
-.shortcut-macro-note { display:block;margin-top:.45rem;color:var(--text-faint);font-size:.59rem;line-height:1.4 }
+.shortcut-macro-note { display:block;margin-top:.45rem;color:var(--text-soft);font-size:.62rem;line-height:1.4 }
 .shortcut-dialog-actions { display:flex;justify-content:flex-end;gap:.45rem;margin-top:1rem }
 .shortcut-dialog-actions button { padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-control);color:var(--muted);font-size:.63rem;cursor:pointer }
 .shortcut-dialog-actions button.is-primary { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink);font-weight:650 }
@@ -155,7 +148,7 @@
 .profile-summary-main { display:flex;flex:1 1 auto;align-items:center;justify-content:space-between;gap:.75rem;min-width:0;padding:.6rem .55rem;border:0;border-radius:10px;background:none;color:inherit;text-align:left;cursor:pointer;transition:background .16s ease }
 .profile-summary-main:hover { background:var(--surface-hover-strong) }
 .profile-summary-text { display:grid;min-width:0;gap:.1rem }
-.profile-summary-label { color:var(--text-faint);font-family:'JetBrains Mono',monospace;font-size:.53rem;font-weight:600;letter-spacing:.09em }
+.profile-summary-label { color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.56rem;font-weight:600;letter-spacing:.09em }
 .profile-summary-text strong { overflow:hidden;color:var(--text-input);font-size:.78rem;font-weight:600;text-overflow:ellipsis;white-space:nowrap }
 .profile-summary-text small { overflow:hidden;color:var(--faint);font-size:.62rem;text-overflow:ellipsis;white-space:nowrap }
 .profile-summary-chevron { width:.4rem;height:.4rem;flex:0 0 auto;border-right:1.4px solid var(--muted);border-bottom:1.4px solid var(--muted);transform:translateY(-2px) rotate(45deg);transition:transform .2s ease }
@@ -173,9 +166,26 @@
    the text ellipsis do its job. */
 #onboard-profile-list, #nape-layer-list { display:grid;grid-template-columns:minmax(0,1fr);gap:.3rem;padding-bottom:.5rem }
 #onboard-profile-list > *, #nape-layer-list > * { min-width:0;box-sizing:border-box }
-#onboard-status { color:var(--ghost);font-size:.58rem;line-height:1.45 }
-.profile-row-text { overflow:hidden }
+#onboard-status { color:var(--text-soft);font-size:.62rem;line-height:1.5 }
+.profile-row-text { display:flex;flex-direction:column;min-width:0;overflow:hidden }
 .profile-row-text strong, .profile-row-text small { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+.profile-row-text strong { color:var(--text-strong);font-size:.72rem }
+.profile-row-text small { color:var(--text-soft);font-size:.62rem }
+
+/* One row per profile in the rail: name/detail on the left, square icon
+   actions on the right. Theme tokens only, so the chrome holds up in every
+   theme. */
+.profile-row { display:flex;gap:.55rem;align-items:center;padding:.45rem .6rem;border:1px solid var(--border);border-radius:10px;background:var(--surface-control) }
+.profile-row.is-open { border-color:var(--line-strong);background:var(--surface-raised) }
+.profile-row.is-disabled { opacity:.55 }
+.profile-row-open { display:flex;gap:.55rem;align-items:center;flex:1;min-width:0;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer }
+.profile-row-open:disabled { cursor:not-allowed }
+.profile-row-rule { display:flex;align-items:center;gap:.5rem;margin:.15rem 0 .05rem }
+.profile-row-rule::before,.profile-row-rule::after { content:"";height:1px;flex:1;background:var(--border) }
+.profile-row-rule small { color:var(--text-soft);font-size:.6rem;letter-spacing:.04em }
+.profile-rule { height:1px;margin:.15rem 0 .05rem;background:var(--border) }
+.profile-list-hint { display:block;margin:0 0 .2rem;color:var(--text-soft);font-size:.6rem }
+.icon-button.is-active { border-color:var(--line-strong);background:var(--surface-hover-soft);color:var(--ui-accent) }
 
 /* Square icon buttons, matching the segmented controls' border and hover. */
 .icon-button { display:inline-flex;align-items:center;justify-content:center;align-self:center;padding:.34rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised);color:var(--text-soft);cursor:pointer;transition:border-color .16s ease,color .16s ease,background .16s ease }
@@ -208,18 +218,12 @@
 
 .dpi-slot-list { display:grid;gap:.3rem;overflow:visible }
 /* One shared column template so the headings line up with the fields under
-   them: slot number, X, axis link, Y, lift-off. */
-.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 1.5rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
+   them: slot number, DPI, lift-off. */
+.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
 .dpi-slot-head { padding:0 0 .1rem;color:var(--text-faint);font-size:.53rem;letter-spacing:.06em;text-transform:uppercase }
 .dpi-slot-head span { padding-left:.15rem }
 .dpi-slot-row > button.dpi-slot-index { padding:.34rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;cursor:pointer }
 .dpi-slot-row.is-default > button.dpi-slot-index { border-color:var(--ui-accent);background:color-mix(in srgb, var(--ui-accent) 16%, var(--surface-raised));color:var(--ui-accent) }
-/* The link control sits between the two fields it joins, so the pairing is
-   read from the layout rather than from a label. */
-.dpi-axis-lock { display:flex;align-items:center;justify-content:center;padding:.3rem 0;border:0;background:none;color:var(--text-faint);cursor:pointer }
-.dpi-axis-lock:hover:not(:disabled) { color:var(--dim) }
-.dpi-axis-lock.is-locked { color:var(--ui-accent) }
-.dpi-axis-lock:disabled { opacity:.45;cursor:not-allowed }
 .dpi-slot-row input[type="number"] { width:100%;min-width:0;box-sizing:border-box;padding:.34rem .3rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised);color:var(--text-input);font-size:.66rem }
 .dpi-slot-row input[type="number"]:hover:not(:disabled) { border-color:var(--ghost) }
 .dpi-slot-row input[type="number"]:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
@@ -247,19 +251,18 @@
 /* Report rate as a slider with one stop per supported rate. */
 .rate-slider { display:grid;gap:.1rem }
 .rate-slider + .rate-slider { margin-top:.65rem }
-.rate-slider-head { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;color:var(--faint);font-size:.6rem }
+.rate-slider-head { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;color:var(--text-soft);font-size:.62rem }
 .rate-slider-head output { color:var(--text-input);font-family:'JetBrains Mono',monospace;font-size:.68rem }
-.rate-slider-input { width:100%;margin:0;accent-color:var(--ui-accent);cursor:pointer }
-.rate-slider-input:disabled { opacity:.5;cursor:not-allowed }
-.rate-slider-scale { position:relative;height:1.15rem;margin-top:.1rem }
-.rate-slider-scale i { position:absolute;top:0;width:5px;height:5px;border-radius:50%;background:var(--border);transform:translateX(-50%) }
-.rate-slider-scale i.is-on { background:var(--ui-accent) }
-.rate-slider-scale span { position:absolute;top:.45rem;transform:translateX(-50%);color:var(--ghost);font-family:'JetBrains Mono',monospace;font-size:.53rem;white-space:nowrap }
-.rate-slider-scale span.is-on { color:var(--text-input) }
+.rate-slider-buttons { display:flex;gap:.4rem }
+.rate-slider-buttons button { flex:1 1 0;min-width:2.5rem;padding:.6rem .3rem;border:1px solid var(--border);border-radius:8px;background:var(--surface-control);color:var(--text-soft);font:600 .74rem/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background .15s,color .15s,border-color .15s }
+.rate-slider-buttons button:hover:not(:disabled) { border-color:var(--line-strong);background:var(--surface-hover-soft);color:var(--text-hover) }
+.rate-slider-buttons button.is-on { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
+.rate-slider-buttons button.is-on:hover:not(:disabled) { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
+.rate-slider-buttons button:disabled { opacity:.5;cursor:not-allowed }
 
 /* The compact layout pins the settings grid to a 176px row. Five slot rows are
    far taller than that, so the grid falls back to sizing by content while the
-   slot editor is showing, the same way it does for the X/Y axis controls. */
+   slot editor is showing. */
 .control-shell .settings-grid.has-dpi-slots { grid-template-rows:minmax(176px,auto) }
 .control-shell .settings-grid.has-dpi-slots .dpi-card { grid-row:auto }
 
@@ -273,6 +276,33 @@
   .dpi-stage-list .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) }
   .dpi-stage-list.has-colors .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) 3rem }
 }
+
+/* Unified DPI stage editor: every device shows up to four rows with a tick,
+   a slot number, a typed value and a slider. Row chrome mirrors the slot rows
+   above; disabled-by-untick rows dim but keep their value locally. */
+#dpi-stage-editor { margin-top:.65rem }
+.dpi-editor-list { display:grid;gap:.35rem }
+.dpi-editor-bar { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;padding:0 0 .15rem }
+.dpi-editor-bar-label { color:var(--text-soft);font:650 .62rem/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap }
+.dpi-editor-bar-count { color:var(--text-soft);font:600 .6rem/1 var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap }
+.dpi-editor-row { display:grid;grid-template-columns:1.4rem 1.7rem 5.2rem minmax(0,1fr) auto;gap:.5rem;align-items:center }
+.dpi-editor-row > input[type="checkbox"].dpi-editor-tick { width:1.2rem;height:1.2rem;margin:0;justify-self:center;accent-color:var(--ui-accent);cursor:pointer }
+.dpi-editor-row.is-off { opacity:.55 }
+.dpi-editor-row > button.dpi-editor-index { padding:.4rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--text-input);font:650 .72rem/1 var(--font-mono);font-variant-numeric:tabular-nums;text-align:center;cursor:pointer }
+.dpi-editor-row.is-active > button.dpi-editor-index { border-color:var(--ui-accent);background:color-mix(in srgb, var(--ui-accent) 16%, var(--surface-raised));color:var(--ui-accent) }
+.dpi-editor-row > button.dpi-editor-index:hover:not(:disabled) { border-color:var(--ghost);color:var(--text-hover) }
+.dpi-editor-row > button.dpi-editor-index:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
+.dpi-editor-row > input[type="number"].dpi-editor-value { width:100%;min-width:0;box-sizing:border-box;padding:.42rem .4rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-input);color:var(--text-input);font:600 .74rem/1.3 var(--font-mono);font-variant-numeric:tabular-nums;text-align:center }
+.dpi-editor-row > input.dpi-editor-value:hover:not(:disabled) { border-color:var(--ghost) }
+.dpi-editor-row > input.dpi-editor-value:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
+.dpi-editor-row > input[type="range"].dpi-editor-slider { width:100%;min-width:0;height:1.2rem;margin:0;accent-color:var(--ui-accent);cursor:pointer }
+.dpi-editor-lod { width:7rem;justify-self:end }
+.dpi-editor-row .lod-select-value { padding:.42rem .5rem;border-radius:7px;color:var(--text-input);font:600 .74rem/1.3 var(--font-mono);font-variant-numeric:tabular-nums }
+.dpi-editor-row .lod-select-menu li { padding:.42rem .52rem;font:550 .74rem/1.4 var(--font-sans);color:var(--text-soft) }
+.dpi-editor-row .lod-select-menu li:hover { color:var(--text-hover) }
+.dpi-editor-lod-none { justify-self:end;color:var(--text-soft);font:600 .74rem/1.3 var(--font-mono) }
+.dpi-editor .setting-note { margin-top:.6rem;color:var(--text-soft);font:500 .7rem/1.55 var(--font-sans);letter-spacing:.01em }
+.dpi-editor input:disabled, .dpi-editor button:disabled { cursor:not-allowed }
 
 /* `.segmented` and friends set display, which outranks the user-agent
    `[hidden] { display: none }` rule — so hiding those rows by setting the

@@ -1,21 +1,69 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { capabilitiesForFormat, stageLodLevel } from "@openmouse/protocol/drivers/logitech/onboard-profiles";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  PROFILE_STAGE_LOD,
+  capabilitiesForFormat,
+  stageLodLevel,
+} from "@openmouse/protocol/drivers/logitech/onboard-profiles";
 import * as control from "../../device/controller";
 import type { ControlSnapshot, LiftOffLevel } from "../../device/types";
-import { dpiPresetValues } from "../../dpi-presets";
+import { closestDpiOption, dpiPresetValues } from "../../dpi-presets";
 import { t, tp } from "../../i18n";
-import { IconLinked, IconUnlinked } from "../icons";
-import { Segmented } from "../ui";
 
-function DpiSlots({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
-  const [openMenu, setOpenMenu] = useState<number | null>(null);
+const MAX_EDITOR_ROWS = 4;
+const DEFAULT_LOD = 2;
+
+type StageRow = { enabled: boolean; value: string; lod: number };
+
+/**
+ * One DPI editor for every device flavor. It always shows up to four rows,
+ * each with a tickbox (include the stage in the DPI cycle), a typed value, and
+ * a slider. Disabled rows keep their value locally so re-enabling restores it.
+ * Logitech slots additionally carry a lift-off picker.
+ */
+function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+  const status = snapshot.status;
   const locale = snapshot.preferences.locale;
+  const options = snapshot.dpiOptions;
+
+  const isLogitech = snapshot.profile.slotsAvailable && snapshot.dpiSlotPlan !== null;
+  const stageEditor = status?.ui?.dpiStageEditor;
+  const isStage = Boolean(stageEditor) && Array.isArray(status?.dpiStages) && (status?.dpiStages?.length ?? 0) > 0;
+
+  const mode: "logitech" | "stage" | "generic" = isLogitech ? "logitech" : isStage ? "stage" : "generic";
   const limits = snapshot.profile.slotLimits;
-  const plan = snapshot.dpiSlotPlan;
-  const locked = snapshot.profile.slotsLocked;
-  const levels = snapshot.profileFormat
-    ? capabilitiesForFormat(snapshot.profileFormat.id).supportedLods
-    : [];
+  const locked = isLogitech ? snapshot.profile.slotsLocked : snapshot.settingsPending;
+
+  const initRows = (): StageRow[] => {
+    if (isLogitech && snapshot.dpiSlotPlan) {
+      const stages = snapshot.dpiSlotPlan.stages.slice(0, MAX_EDITOR_ROWS);
+      const last = stages[stages.length - 1]?.x ?? status?.dpi ?? 800;
+      const rows = stages.map((stage) => ({ enabled: true, value: String(stage.x), lod: stage.lod }));
+      while (rows.length < MAX_EDITOR_ROWS) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
+      return rows;
+    }
+    if (isStage && status?.dpiStages) {
+      const stages = status.dpiStages.slice(0, MAX_EDITOR_ROWS);
+      const last = stages[stages.length - 1] ?? status.dpi ?? 800;
+      const rows = stages.map((value) => ({ enabled: true, value: String(value), lod: DEFAULT_LOD }));
+      while (rows.length < MAX_EDITOR_ROWS) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
+      return rows;
+    }
+    const presets = dpiPresetValues(options);
+    const ordered = [status?.dpi, ...presets.filter((value) => value !== status?.dpi)]
+      .filter((value): value is number => typeof value === "number")
+      .slice(0, MAX_EDITOR_ROWS);
+    while (ordered.length < MAX_EDITOR_ROWS) ordered.push(ordered[ordered.length - 1] ?? 800);
+    return ordered.map((value) => ({ enabled: value === status?.dpi, value: String(value), lod: DEFAULT_LOD }));
+  };
+
+  const [rows, setRows] = useState<StageRow[]>(initRows);
+  const [openMenu, setOpenMenu] = useState<number | null>(null);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const touchedRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const levels = isLogitech && snapshot.profileFormat ? capabilitiesForFormat(snapshot.profileFormat.id).supportedLods : [];
   const profileHasLod = levels.length > 0;
 
   useEffect(() => {
@@ -32,294 +80,268 @@ function DpiSlots({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
     };
   }, [openMenu]);
 
-  if (!limits || !plan) return null;
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const countCap = isLogitech ? (limits?.maxStages ?? 1) : stageEditor?.maxStages ?? 1;
+  const fixedStageCount = isStage && stageEditor?.countEditable !== true;
+
+  // Rebuild local rows only when the device source clearly changes while the
+  // user is not mid-edit; disabled-but-kept rows are local and must survive.
+  const sourceSig = isLogitech
+    ? (snapshot.dpiSlotPlan?.stages.map((stage) => stage.x).join(",") ?? "-")
+    : isStage
+      ? (status?.dpiStages?.join(",") ?? "-")
+      : String(status?.dpi ?? 0);
+  const lastSigRef = useRef(sourceSig);
+  useEffect(() => {
+    if (sourceSig === lastSigRef.current) return;
+    lastSigRef.current = sourceSig;
+    if (Date.now() - touchedRef.current > 1500) setRows(initRows());
+    // initRows is recreated each render on purpose so it always reads fresh snapshot data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceSig]);
+
+  const compactIndex = (target: number): number =>
+    rows.slice(0, target).reduce((count, row) => count + (row.enabled ? 1 : 0), 0);
+
+  const parseRow = (raw: string): number | null =>
+    /^\d+$/.test(raw.trim()) && Number(raw) > 0 ? Number(raw) : null;
+
+  const commit = (next: StageRow[]): void => {
+    if (mode === "logitech") {
+      control.applyDpiSlotEditor(
+        next.map((row) => ({ enabled: row.enabled, value: parseRow(row.value) ?? (limits?.minDpi ?? 100), lod: row.lod })),
+      );
+      return;
+    }
+    if (mode === "stage") {
+      const enabled = next.filter((row) => row.enabled);
+      const current = status?.dpiStages ?? [];
+      if (stageEditor?.countEditable === true && enabled.length !== current.length) {
+        control.applyDpiStageCount(enabled.length);
+      }
+      enabled.forEach((row, position) => {
+        const value = parseRow(row.value);
+        if (value === null || current[position] === value) return;
+        control.applyDpiStageValue(position, value);
+      });
+      return;
+    }
+    const active = next.find((row) => row.enabled);
+    if (!active) return;
+    const snap = closestDpiOption(options, parseRow(active.value) ?? status?.dpi ?? 0);
+    if (snap !== null && snap !== status?.dpi) {
+      control.applyDpiValue(snap);
+      const next2 = next.map((row) => (row.enabled ? { ...row, value: String(snap) } : row));
+      setRows(next2);
+      rowsRef.current = next2;
+    }
+  };
+
+  const markEdited = (next: StageRow[]): void => {
+    touchedRef.current = Date.now();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => commit(rowsRef.current), 450);
+    void next;
+  };
+
+  const setEnabled = (index: number, enabled: boolean): void => {
+    const next = rows.map((row, i) => (i === index ? { ...row, enabled: !row.enabled } : row));
+    if (mode === "generic") {
+      if (!enabled || next[index].enabled === rows[index].enabled) return;
+      const snap = closestDpiOption(options, parseRow(next[index].value) ?? status?.dpi ?? 0);
+      if (snap === null) return;
+      const selected = next.map((row, i) => (i === index ? { ...row, enabled: true } : { ...row, enabled: false }));
+      setRows(selected);
+      rowsRef.current = selected;
+      control.applyDpiValue(snap);
+      touchedRef.current = Date.now();
+      return;
+    }
+    const count = next.filter((row) => row.enabled).length;
+    if (count < 1 || count > countCap) return;
+    if (fixedStageCount) return;
+    setRows(next);
+    rowsRef.current = next;
+    markEdited(next);
+  };
+
+  const setValue = (index: number, raw: string): void => {
+    const next = rows.map((row, i) => (i === index ? { ...row, value: raw.replace(/[^\d]/g, "") } : row));
+    setRows(next);
+    rowsRef.current = next;
+    markEdited(next);
+  };
+
+  const setSlider = (index: number, numeric: number): void => setValue(index, String(numeric));
+
+  const setLod = (index: number, level: LiftOffLevel): void => {
+    const value = PROFILE_STAGE_LOD[level];
+    const next = rows.map((row, i) => (i === index ? { ...row, lod: value } : row));
+    setRows(next);
+    rowsRef.current = next;
+    markEdited(next);
+  };
+
+  const setActive = (index: number): void => {
+    if (!rows[index].enabled) return;
+    if (mode === "logitech") {
+      control.setDpiSlotDefault(compactIndex(index));
+      return;
+    }
+    if (mode === "stage") {
+      control.applyActiveDpiStage(compactIndex(index));
+      return;
+    }
+    setEnabled(index, !rows[index].enabled);
+  };
+
+  const sliderFor = (row: StageRow): { min: number; max: number; step: number; pos: number } => {
+    if (mode === "logitech" && limits) {
+      const value = Math.min(limits.maxDpi, Math.max(limits.minDpi, parseRow(row.value) ?? limits.minDpi));
+      return { min: limits.minDpi, max: limits.maxDpi, step: limits.stepDpi, pos: value };
+    }
+    if (mode === "stage" && stageEditor) {
+      const value = Math.min(stageEditor.maxDpi, Math.max(stageEditor.minDpi, parseRow(row.value) ?? stageEditor.minDpi));
+      return { min: stageEditor.minDpi, max: stageEditor.maxDpi, step: stageEditor.stepDpi, pos: value };
+    }
+    const target = parseRow(row.value) ?? status?.dpi ?? 0;
+    const pos = options.length > 0 ? closestDpiOption(options, target) ?? 0 : 0;
+    const idx = Math.max(0, options.indexOf(pos));
+    return { min: 0, max: Math.max(0, options.length - 1), step: 1, pos: idx };
+  };
+
+  const sliderCommit = (index: number, numeric: number): void => {
+    if (mode === "generic") {
+      const snapped = options[Math.round(numeric)];
+      if (snapped !== undefined) setSlider(index, snapped);
+      return;
+    }
+    setSlider(index, Math.round(numeric));
+  };
+
+  const rowTitle = mode === "logitech" ? t(locale, "dpi.makeStarting") : t(locale, "dpi.makeActive");
+  const note =
+    mode === "logitech"
+      ? locked
+        ? t(locale, "dpi.slotReadonly")
+        : t(locale, "dpi.editorCountNote")
+      : fixedStageCount
+        ? tp(locale, "dpi.editorFixedNote", { total: status?.dpiStages?.length ?? 0 })
+        : mode === "stage"
+          ? t(locale, "dpi.editorCountNote")
+          : t(locale, "dpi.editorGenericNote");
+
+  const enabledCount = rows.filter((row) => row.enabled).length;
 
   return (
-    <div id="logitech-dpi-slots">
-      <div className="dpi-slot-header">
-        <span>{t(locale, "dpi.slotsInUse")}</span>
-        <div id="dpi-slot-count" className="dpi-slot-count" role="group" aria-label={t(locale, "dpi.slotsCount")}>
-          {Array.from({ length: limits.maxStages }, (_, step) => {
-            const value = step + 1;
-            const on = value === plan.stages.length;
-            return (
-              <button
-                key={value}
-                type="button"
-                disabled={locked}
-                className={on ? "selected" : ""}
-                aria-pressed={on}
-                onClick={() => control.setDpiSlotCount(value)}
-              >
-                {value}
-              </button>
-            );
-          })}
-        </div>
+    <div id="dpi-stage-editor" className={`dpi-editor mode-${mode}`}>
+      <div className="dpi-editor-bar">
+        <span className="dpi-editor-bar-label">
+          {t(locale, mode === "logitech" ? "dpi.slotsInUse" : "dpi.stagesInUse")}
+        </span>
+        <span className="dpi-editor-bar-count">{enabledCount} / {rows.length}</span>
       </div>
       <div className="dpi-slot-rule" />
-      <div id="dpi-slot-list" className="dpi-slot-list">
-        <div className="dpi-slot-row dpi-slot-head">
-          <span /><span>X</span><span /><span>Y</span><span>Lift-off</span>
-        </div>
-        {plan.stages.map((stage, index) => {
-          const level = stageLodLevel(stage.lod);
-          const isDefault = index === plan.defaultIndex;
-          const axisLocked = snapshot.dpiAxisLocks[index] ?? true;
+      <div id="dpi-editor-list" className="dpi-editor-list">
+        {rows.map((row, index) => {
+          const slider = sliderFor(row);
+          const level = mode === "logitech" ? stageLodLevel(row.lod) : null;
+          const isActive = mode === "stage" ? compactIndex(index) === (status?.activeDpiStage ?? 0) : null;
+          const isStarting = mode === "logitech" && snapshot.dpiSlotPlan
+            ? compactIndex(index) === snapshot.dpiSlotPlan.defaultIndex
+            : false;
+          const highlighted = mode === "generic" ? row.enabled : mode === "stage" ? isActive === true : isStarting;
           return (
-            <div key={index} className={`dpi-slot-row${isDefault ? " is-default" : ""}`}>
+            <div key={index} className={`dpi-editor-row${row.enabled ? "" : " is-off"}${highlighted ? " is-active" : ""}`}>
+              <input
+                type="checkbox"
+                className="dpi-editor-tick"
+                aria-label={tp(locale, "dpi.stageToggle", { n: index + 1 })}
+                checked={row.enabled}
+                disabled={locked || fixedStageCount}
+                onChange={() => setEnabled(index, !row.enabled)}
+              />
               <button
                 type="button"
-                className="dpi-slot-index"
-                disabled={locked}
-                title={isDefault ? t(locale, "dpi.startingSlot") : t(locale, "dpi.makeStarting")}
-                aria-pressed={isDefault}
-                onClick={() => control.setDpiSlotDefault(index)}
+                className="dpi-editor-index"
+                disabled={locked || !row.enabled}
+                title={rowTitle}
+                aria-pressed={highlighted}
+                onClick={() => setActive(index)}
               >
                 {index + 1}
               </button>
               <input
                 type="number"
-                aria-label={tp(locale, "dpi.slotX", { n: index + 1 })}
-                min={limits.minDpi}
-                max={limits.maxDpi}
-                step={limits.stepDpi}
-                defaultValue={stage.x}
-                key={`x-${index}-${stage.x}`}
+                className="dpi-editor-value"
+                aria-label={tp(locale, "dpi.stageDpi", { n: index + 1 })}
+                min={slider.min}
+                max={slider.max}
+                step={slider.step}
+                value={row.value}
                 disabled={locked}
-                onChange={(event) => control.setDpiSlotAxis(index, "x", Number(event.currentTarget.value))}
+                onChange={(event) => setValue(index, event.currentTarget.value)}
               />
-              <button
-                type="button"
-                className={`dpi-axis-lock${axisLocked ? " is-locked" : ""}`}
-                disabled={locked}
-                title={axisLocked
-                  ? t(locale, "dpi.linkedHint")
-                  : t(locale, "dpi.unlinkedHint")}
-                aria-label={tp(locale, "dpi.linkXY", { n: index + 1 })}
-                aria-pressed={axisLocked}
-                onClick={() => control.setDpiAxisLock(index, !axisLocked)}
-              >
-                {axisLocked ? <IconLinked /> : <IconUnlinked />}
-              </button>
               <input
-                type="number"
-                aria-label={tp(locale, "dpi.slotY", { n: index + 1 })}
-                min={limits.minDpi}
-                max={limits.maxDpi}
-                step={limits.stepDpi}
-                defaultValue={stage.y}
-                key={`y-${index}-${stage.y}`}
-                disabled={locked || axisLocked}
-                onChange={(event) => control.setDpiSlotAxis(index, "y", Number(event.currentTarget.value))}
+                type="range"
+                className="dpi-editor-slider"
+                aria-label={tp(locale, "dpi.stageDpi", { n: index + 1 })}
+                min={slider.min}
+                max={slider.max}
+                step={slider.step}
+                value={slider.pos}
+                disabled={locked}
+                onChange={(event) => sliderCommit(index, Number(event.currentTarget.value))}
               />
-              <div className={`lod-select${openMenu === index ? " is-open" : ""}`}>
-                <button
-                  type="button"
-                  className="lod-select-value"
-                  disabled={locked || !profileHasLod}
-                  aria-haspopup="listbox"
-                  aria-expanded={openMenu === index}
-                  aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}
-                  title={profileHasLod ? t(locale, "dpi.liftOffTitle") : t(locale, "dpi.noLiftOff")}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setOpenMenu(openMenu === index ? null : index);
-                  }}
-                >
-                  <span>{level ?? "—"}</span>
-                  <i aria-hidden="true" />
-                </button>
-                <ul className="lod-select-menu" role="listbox" aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}>
-                  {levels.map((name) => (
-                    <li
-                      key={name}
-                      role="option"
-                      aria-selected={name === level}
-                      onClick={() => {
-                        setOpenMenu(null);
-                        control.setDpiSlotLod(index, name as LiftOffLevel);
+              {mode === "logitech" ? (
+                profileHasLod ? (
+                  <div className={`lod-select dpi-editor-lod${openMenu === index ? " is-open" : ""}`}>
+                    <button
+                      type="button"
+                      className="lod-select-value"
+                      disabled={locked}
+                      aria-haspopup="listbox"
+                      aria-expanded={openMenu === index}
+                      aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}
+                      title={t(locale, "dpi.liftOffTitle")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenMenu(openMenu === index ? null : index);
                       }}
                     >
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <small id="dpi-slot-note" className="setting-note">
-        {locked
-          ? t(locale, "dpi.slotReadonly")
-          : tp(locale, "dpi.slotNote", { min: limits.minDpi, max: limits.maxDpi, step: limits.stepDpi })}
-      </small>
-    </div>
-  );
-}
-
-/** Shared Compx/Keychron-style stages: one DPI value per stage + active highlight. */
-function DpiStages({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
-  const status = snapshot.status;
-  const locale = snapshot.preferences.locale;
-  const editor = status?.ui?.dpiStageEditor;
-  const stages = status?.dpiStages;
-  if (!status || !editor || !stages || stages.length === 0) return null;
-
-  const countEditable = editor.countEditable === true;
-  const active = Math.min(status.activeDpiStage ?? 0, stages.length - 1);
-  const disabled = snapshot.settingsPending;
-
-  return (
-    <div id="dpi-stages">
-      {countEditable ? (
-        <>
-          <div id="dpi-stage-count-header" className="dpi-slot-header">
-            <span>{t(locale, "dpi.stagesInUse")}</span>
-            <div id="dpi-stage-count" className="dpi-slot-count" role="group" aria-label={t(locale, "dpi.stagesCount")}>
-              {Array.from({ length: editor.maxStages }, (_, step) => {
-                const value = step + 1;
-                const on = value === stages.length;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={disabled}
-                    className={on ? "selected" : ""}
-                    aria-pressed={on}
-                    onClick={() => control.applyDpiStageCount(value)}
-                  >
-                    {value}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="dpi-slot-rule" />
-        </>
-      ) : null}
-      <div id="dpi-stage-list" className={`dpi-slot-list dpi-stage-list${status.dpiStageColors ? " has-colors" : ""}`}>
-        <div className="dpi-slot-row dpi-slot-head">
-          <span /><span>DPI</span>{status.dpiStageColors ? <span>{t(locale, "dpi.color")}</span> : null}
-        </div>
-        {stages.map((dpi, index) => {
-          const isActive = index === active;
-          return (
-            <div key={index} className={`dpi-slot-row${isActive ? " is-default" : ""}`}>
-              <button
-                type="button"
-                className="dpi-slot-index"
-                disabled={disabled}
-                title={isActive ? t(locale, "dpi.activeStage") : t(locale, "dpi.makeActive")}
-                aria-pressed={isActive}
-                onClick={() => control.applyActiveDpiStage(index)}
-              >
-                {index + 1}
-              </button>
-              <input
-                type="number"
-                aria-label={tp(locale, "dpi.stageDpi", { n: index + 1 })}
-                min={editor.minDpi}
-                max={editor.maxDpi}
-                step={editor.stepDpi}
-                defaultValue={dpi}
-                key={`stage-${index}-${dpi}`}
-                disabled={disabled}
-                // Commit on blur/Enter, never per keystroke: clearing the
-                // field to type a new value used to apply Number("") = 0 on
-                // the first Backspace, snapping the stage to the minimum
-                // and stealing focus via the key remount mid-typing.
-                onBlur={(event) => {
-                  const raw = event.currentTarget.value.trim();
-                  if (raw === "") {
-                    event.currentTarget.value = String(dpi);
-                    return;
-                  }
-                  const next = Number(raw);
-                  if (Number.isInteger(next) && next !== dpi) control.applyDpiStageValue(index, next);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    event.currentTarget.blur();
-                  }
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    event.currentTarget.value = String(dpi);
-                    event.currentTarget.blur();
-                  }
-                }}
-              />
-              {status.dpiStageColors ? (
-                <input
-                  type="color"
-                  aria-label={tp(locale, "dpi.stageColor", { n: index + 1 })}
-                  value={status.dpiStageColors[index] ?? "#000000"}
-                  disabled={disabled}
-                  onChange={(event) => control.applyDpiStageColor(index, event.currentTarget.value)}
-                />
+                      <span>{level ?? "—"}</span>
+                      <i aria-hidden="true" />
+                    </button>
+                    <ul className="lod-select-menu" role="listbox" aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}>
+                      {levels.map((name) => (
+                        <li
+                          key={name}
+                          role="option"
+                          aria-selected={name === level}
+                          onClick={() => {
+                            setOpenMenu(null);
+                            setLod(index, name as LiftOffLevel);
+                          }}
+                        >
+                          {name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <output className="dpi-editor-lod-none">—</output>
+                )
               ) : null}
             </div>
           );
         })}
       </div>
-      <small id="dpi-stage-note" className="setting-note">
-        {countEditable
-          ? tp(locale, "dpi.stageNoteCount", { min: editor.minDpi.toLocaleString(), max: editor.maxDpi.toLocaleString() })
-          : tp(locale, "dpi.stageNoteSteps", { min: editor.minDpi.toLocaleString(), max: editor.maxDpi.toLocaleString(), step: editor.stepDpi, total: editor.maxStages })}
-      </small>
-    </div>
-  );
-}
-
-function AxisControls({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
-  const status = snapshot.status!;
-  const locale = snapshot.preferences.locale;
-  const [x, setX] = useState(String(status.dpi));
-  const [y, setY] = useState(String(status.dpiY ?? status.dpi));
-  useEffect(() => {
-    setX(String(status.dpi));
-    setY(String(status.dpiY ?? status.dpi));
-  }, [status.dpi, status.dpiY]);
-  const min = snapshot.dpiOptions.length ? Math.min(...snapshot.dpiOptions) : 100;
-  const max = snapshot.dpiOptions.length ? Math.max(...snapshot.dpiOptions) : undefined;
-  return (
-    <div id="logitech-axis-controls">
-      <div className="axis-grid">
-        <label>
-          {t(locale, "dpi.xAxis")}
-          <input
-            id="logitech-dpi-x"
-            type="number"
-            min={min}
-            max={max}
-            step={50}
-            value={x}
-            onChange={(event) => setX(event.currentTarget.value)}
-          />
-        </label>
-        <label>
-          {t(locale, "dpi.yAxis")}
-          <input
-            id="logitech-dpi-y"
-            type="number"
-            min={min}
-            max={max}
-            step={50}
-            value={y}
-            onChange={(event) => setY(event.currentTarget.value)}
-          />
-        </label>
-        <button
-          id="apply-logitech-axes"
-          className="axis-apply"
-          type="button"
-          onClick={() => control.applyLogitechAxisDpi(Number(x), Number(y))}
-        >
-          {t(locale, "common.apply")}
-        </button>
-      </div>
+      <small className="setting-note">{note}</small>
     </div>
   );
 }
@@ -332,30 +354,16 @@ export function DpiCard({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
   const staged = snapshot.pending.keys.includes("dpi")
     || snapshot.pending.keys.includes("dpi-stage-count")
     || snapshot.pending.keys.includes("dpi-active-stage")
+    || snapshot.pending.keys.includes("logitech-dpi-slots")
     || snapshot.pending.keys.some((key) => key.startsWith("dpi-stage-"));
   const slotsAvailable = snapshot.profile.slotsAvailable;
-  const stagesAvailable = Boolean(status.ui?.dpiStageEditor)
-    && Array.isArray(status.dpiStages)
-    && status.dpiStages.length > 0
-    && !slotsAvailable;
-  const showSeparateDpiAxes = snapshot.traits.logitech
-    && status.supportsSeparateDpiAxes === true
-    && !slotsAvailable;
 
-  const common = dpiPresetValues(snapshot.dpiOptions);
-  // Stage-editor mice list every stage below with the active one highlighted
-  // — injecting the current DPI as an extra preset chip only makes it blink
-  // in and out while cycling non-round stages. Keep presets stable there.
-  const values = stagesAvailable || common.includes(status.dpi) ? common : [...common, status.dpi].sort((a, b) => a - b);
-
-  const label = (source: typeof status): string => showSeparateDpiAxes
-    ? `X ${source.dpi.toLocaleString()} · Y ${(source.dpiY ?? source.dpi).toLocaleString()} DPI`
-    : `${source.dpi.toLocaleString()} DPI`;
+  const label = (source: typeof status): string => `${source.dpi.toLocaleString()} DPI`;
 
   return (
     <article
       className={`setting-card dpi-card${staged ? " is-staged" : ""}`}
-      data-pending-key="dpi dpi-stage-count dpi-active-stage"
+      data-pending-key="dpi dpi-stage-count dpi-active-stage logitech-dpi-slots"
     >
       <div className="setting-heading">
         <div>
@@ -402,21 +410,7 @@ export function DpiCard({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
         </div>
       </div>
 
-      {slotsAvailable ? null : (
-        <Segmented
-          id="dpi-presets"
-          className="dpi-presets"
-          ariaLabel={t(locale, "dpi.presets")}
-          options={values.map((dpi) => ({ value: dpi, label: dpi.toLocaleString() }))}
-          value={status.dpi}
-          disabled={snapshot.settingsPending}
-          onChange={(dpi) => control.applyDpiValue(dpi)}
-        />
-      )}
-
-      {showSeparateDpiAxes ? <AxisControls snapshot={snapshot} /> : null}
-      {slotsAvailable ? <DpiSlots snapshot={snapshot} /> : null}
-      {stagesAvailable ? <DpiStages snapshot={snapshot} /> : null}
+      <DpiStageEditor snapshot={snapshot} />
 
       <div className="setting-action">
         <span id="dpi-pending">

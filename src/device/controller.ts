@@ -2508,6 +2508,26 @@ export function setDpiSlotDefault(index: number): void {
   stageDpiSlots();
 }
 
+export function applyDpiSlotEditor(rows: { enabled: boolean; value: number; lod: number }[]): void {
+  const limits = dpiSlotLimits();
+  if (!dpiSlotPlan || !limits || dpiSlotsLocked()) return;
+  const enabled = rows.filter((row) => row.enabled && row.value > 0);
+  if (enabled.length === 0) return;
+  const previous = dpiSlotPlan.stages;
+  const oldDefault = previous[dpiSlotPlan.defaultIndex]?.x;
+  const stages = enabled.slice(0, limits.maxStages).map((row) => ({
+    x: clampDpi(row.value, limits),
+    y: clampDpi(row.value, limits),
+    lod: Number.isFinite(row.lod) && row.lod >= 0 ? Math.round(row.lod) : 2,
+  }));
+  const matchedDefault = stages.findIndex((stage) => stage.x === oldDefault);
+  dpiSlotPlan = {
+    stages,
+    defaultIndex: matchedDefault === -1 ? 0 : matchedDefault,
+  };
+  stageDpiSlots();
+}
+
 export function setDpiAxisLock(index: number, locked: boolean): void {
   if (dpiSlotsLocked()) return;
   dpiAxisLocks = dpiAxisLocks.slice();

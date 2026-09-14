@@ -1,42 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as control from "../../../device/controller";
 import type { ControlSnapshot } from "../../../device/types";
 import { t, tp } from "../../../i18n";
 import { IconActivate, IconRunning } from "../../icons";
 import "./profile-card.css";
-
-const ROW_STYLE = (open: boolean): CSSProperties => ({
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  padding: ".45rem .6rem",
-  border: `1px solid ${open ? "#4a4a52" : "#26262a"}`,
-  borderRadius: "7px",
-  background: open ? "#1b1b1f" : "#141416",
-});
-
-const OPEN_BUTTON_STYLE: CSSProperties = {
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  flex: 1,
-  minWidth: 0,
-  textAlign: "left",
-  background: "none",
-  border: 0,
-  padding: 0,
-  cursor: "pointer",
-};
-
-const ICON_BUTTON_STYLE = (disabled: boolean, active = false): CSSProperties => ({
-  display: "flex",
-  padding: ".3rem",
-  border: `1px solid ${active ? "#4a4a52" : "#3a3a3f"}`,
-  borderRadius: "5px",
-  background: "#19191c",
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.4 : 1,
-});
 
 function profileLabel(
   locale: ControlSnapshot["preferences"]["locale"],
@@ -108,10 +75,8 @@ export function TeevolutionProfileCard({ snapshot }: { snapshot: ControlSnapshot
       <div id="teevolution-profile-disclosure-body" className="profile-disclosure-body" ref={body}>
         <div className="profile-disclosure-inner" ref={inner}>
           <div id="teevolution-profile-list">
-            <div style={{ display: "flex", alignItems: "center", gap: ".5rem", margin: ".15rem 0 .05rem" }}>
-              <span style={{ height: 1, flex: 1, background: "#26262a" }} />
-            </div>
-            <small style={{ display: "block", margin: "0 0 .2rem", color: "#5c5c62", fontSize: ".58rem" }}>
+            <div className="profile-rule" />
+            <small className="profile-list-hint">
               Click a profile to switch the mouse to it.
             </small>
             {Array.from({ length: count }, (_, index) => {
@@ -120,22 +85,22 @@ export function TeevolutionProfileCard({ snapshot }: { snapshot: ControlSnapshot
               const tags = running ? t(locale, "prof.active") : "";
               const label = profileLabel(locale, names, index);
               return (
-                <div key={value} style={ROW_STYLE(running)}>
+                <div key={value} className={`profile-row${running ? " is-open" : ""}`}>
                   <button
                     type="button"
                     disabled={busy}
                     title={running ? t(locale, "prof.runningProfile") : t(locale, "prof.switchProfile")}
-                    style={OPEN_BUTTON_STYLE}
+                    className="profile-row-open"
                     onClick={() => {
                       if (!running) void control.applyProfileSelection(value);
                     }}
                   >
                     <span className={`device-dot${running ? "" : " is-idle"}`} />
-                    <span className="profile-row-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                      <strong style={{ fontSize: ".72rem", color: "#e6e6ea" }}>
+                    <span className="profile-row-text">
+                      <strong>
                         {label}{tags ? ` · ${tags}` : ""}
                       </strong>
-                      <small style={{ color: "#77777c", fontSize: ".62rem" }}>
+                      <small>
                         {running ? liveDetail || "stored on the mouse" : "stored on the mouse"}
                       </small>
                     </span>
@@ -146,7 +111,7 @@ export function TeevolutionProfileCard({ snapshot }: { snapshot: ControlSnapshot
                     title={running ? t(locale, "prof.runningProfile") : t(locale, "prof.switchProfile")}
                     aria-label={`Switch to profile ${value}`}
                     aria-pressed={running}
-                    style={ICON_BUTTON_STYLE(busy || running, running)}
+                    className={`icon-button${running ? " is-active" : ""}`}
                     onClick={() => void control.applyProfileSelection(value)}
                   >
                     {running ? <IconRunning /> : <IconActivate />}

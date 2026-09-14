@@ -138,6 +138,51 @@ function DeviceShowcase({ snapshot, onRequestArtwork }: {
   );
 }
 
+function DeviceShowcaseSidebar({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+  const status = snapshot.status;
+  if (!status) return null;
+  const locale = snapshot.preferences.locale;
+  const image = snapshot.deviceArtwork;
+
+  return (
+    <div className="showcase-sidebar">
+      <div className="showcase-sidebar-visual">
+        {image ? (
+          <img
+            className="showcase-sidebar-image"
+            src={image}
+            alt={status.name}
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = deviceImage(null);
+            }}
+          />
+        ) : null}
+      </div>
+      <div className="showcase-sidebar-info">
+        <h2 className="showcase-sidebar-name">{status.name}</h2>
+        <p className="showcase-sidebar-brand">{status.brand}</p>
+      </div>
+      <div className="showcase-sidebar-status">
+        <span className="device-showcase-dot" aria-hidden="true" />
+        {t(locale, "side.connected")}
+        {status.connectionType ? (
+          <span className="device-showcase-status-detail">
+            {" · "}{connectionText(locale, status.connectionType)}
+          </span>
+        ) : null}
+        {status.batteryPercent !== null ? (
+          <span className="device-showcase-status-detail">
+            {" · "}
+            <BatteryIcon percent={status.batteryPercent} state={status.batteryState} />
+            {status.batteryPercent}%
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function DeviceInfoGrid({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
   const status = snapshot.status;
   if (!status) return null;
@@ -410,9 +455,6 @@ export function Workspace({
     && Array.isArray(status.dpiStages)
     && status.dpiStages.length > 0
     && !slotsAvailable;
-  const showSeparateDpiAxes = snapshot.traits.logitech
-    && status.supportsSeparateDpiAxes === true
-    && !slotsAvailable;
 
   return (
     <>
@@ -437,15 +479,19 @@ export function Workspace({
         <section
           id="performance-settings"
           className={[
-            "settings-grid device-data",
-            showSeparateDpiAxes ? "has-logitech-axis-controls" : "",
+            "performance-layout device-data",
             slotsAvailable || stagesAvailable ? "has-dpi-slots" : "",
           ].filter(Boolean).join(" ")}
           data-workspace-host
           role="tabpanel"
           aria-label="Mouse settings"
         >
-          {performance}
+          <aside className="performance-sidebar">
+            <DeviceShowcaseSidebar snapshot={snapshot} />
+          </aside>
+          <div className="performance-controls">
+            {performance}
+          </div>
         </section>
       ) : null}
 

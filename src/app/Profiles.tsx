@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { capabilitiesForFormat } from "@openmouse/protocol/drivers/logitech/onboard-profiles";
 import { LOGITECH_BUTTON_ACTIONS, type LogitechButtonAction } from "@openmouse/protocol/drivers/logitech/onboard-profiles";
 import * as control from "../device/controller";
@@ -6,40 +6,6 @@ import type { ControlSnapshot } from "../device/types";
 import { hidKeyForCode, shortcutLabel } from "./hid-keys";
 import { t, tp } from "../i18n";
 import { IconActivate, IconDisabled, IconEnabled, IconRefresh, IconRename, IconRunning, IconTrash } from "./icons";
-
-const ROW_STYLE = (open: boolean, enabled = true): CSSProperties => ({
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  padding: ".45rem .6rem",
-  border: `1px solid ${open ? "#4a4a52" : "#26262a"}`,
-  borderRadius: "7px",
-  background: open ? "#1b1b1f" : "#141416",
-  opacity: enabled ? 1 : 0.55,
-});
-
-const OPEN_BUTTON_STYLE = (locked: boolean): CSSProperties => ({
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  flex: 1,
-  minWidth: 0,
-  textAlign: "left",
-  background: "none",
-  border: 0,
-  padding: 0,
-  cursor: locked ? "not-allowed" : "pointer",
-});
-
-const ICON_BUTTON_STYLE = (disabled: boolean, active = false): CSSProperties => ({
-  display: "flex",
-  padding: ".3rem",
-  border: `1px solid ${active ? "#4a4a52" : "#3a3a3f"}`,
-  borderRadius: "5px",
-  background: "#19191c",
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.4 : 1,
-});
 
 export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
   const [assignmentLayer, setAssignmentLayer] = useState<"primary" | "g-shift">("primary");
@@ -123,19 +89,19 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
           <div id="onboard-profile-list">
             {profiles === null ? null : (
               <>
-                <div style={ROW_STYLE(hostOpened)}>
+                <div className={`profile-row${hostOpened ? " is-open" : ""}`}>
                   <button
                     type="button"
                     title={t(locale, "prof.openHost")}
-                    style={OPEN_BUTTON_STYLE(false)}
+                    className="profile-row-open"
                     onClick={() => control.openOnboardProfile("host")}
                   >
                     <span className={`device-dot${hostRunning ? "" : " is-idle"}`} />
-                    <span className="profile-row-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                      <strong style={{ fontSize: ".72rem", color: "#e6e6ea" }}>
+                    <span className="profile-row-text">
+                      <strong>
                         Host — live{hostTags ? ` · ${hostTags}` : ""}
                       </strong>
-                      <small style={{ color: "#77777c", fontSize: ".62rem" }}>
+                      <small>
                         Settings applied by software, not stored on the mouse. Lost on power-cycle.
                       </small>
                     </span>
@@ -146,21 +112,19 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
                     title={hostRunning ? t(locale, "prof.hostAlready") : t(locale, "prof.switchHost")}
                     aria-label={t(locale, "prof.switchHostAria")}
                     aria-pressed={hostRunning}
-                    style={ICON_BUTTON_STYLE(hostRunning, hostRunning)}
+                    className={`icon-button${hostRunning ? " is-active" : ""}`}
                     onClick={() => void control.applyOnboardMode("Host")}
                   >
                     {hostRunning ? <IconRunning /> : <IconActivate />}
                   </button>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: ".5rem", margin: ".15rem 0 .05rem" }}>
-                  <span style={{ height: 1, flex: 1, background: "#26262a" }} />
-                  <small style={{ color: "#5c5c62", fontSize: ".58rem", letterSpacing: ".04em" }}>
+                <div className="profile-row-rule">
+                  <small>
                     STORED ON THE MOUSE
                   </small>
-                  <span style={{ height: 1, flex: 1, background: "#26262a" }} />
                 </div>
-                <small style={{ display: "block", margin: "0 0 .2rem", color: "#5c5c62", fontSize: ".58rem" }}>
+                <small className="profile-list-hint">
                   Click a profile to edit it. Use the circle to switch the mouse to it.
                 </small>
 
@@ -188,23 +152,23 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
                   const activateDisabled = locked || running || !profile.enabled;
 
                   return (
-                    <div key={profile.sector} style={ROW_STYLE(opened, profile.enabled)}>
+                    <div key={profile.sector} className={`profile-row${opened ? " is-open" : ""}${profile.enabled ? "" : " is-disabled"}`}>
                       <button
                         type="button"
                         disabled={locked}
                         title={locked
                           ? t(locale, "prof.layoutUnverified")
                           : t(locale, "prof.openProfile")}
-                        style={OPEN_BUTTON_STYLE(locked)}
+                        className="profile-row-open"
                         onClick={() => control.openOnboardProfile(profile.sector)}
                       >
                         <span className={`device-dot${running ? "" : " is-idle"}`} />
-                        <span className="profile-row-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                          <strong style={{ fontSize: ".72rem", color: "#e6e6ea" }}>
+                        <span className="profile-row-text">
+                          <strong>
                             {(opened && snapshot.stagedProfileName) || profile.name || `Profile ${profile.sector}`}
                             {tags ? ` · ${tags}` : ""}
                           </strong>
-                          <small style={{ color: "#77777c", fontSize: ".62rem" }}>{detail}</small>
+                          <small>{detail}</small>
                         </span>
                       </button>
                       <button
@@ -216,7 +180,7 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
                             ? t(locale, "prof.contentUnverified")
                             : t(locale, "prof.renameProfile")}
                         aria-label={`Rename profile ${profile.sector}`}
-                        style={ICON_BUTTON_STYLE(renameDisabled)}
+                        className="icon-button"
                         onClick={() => control.renameOnboardProfile(profile.sector)}
                       >
                         <IconRename />
@@ -231,7 +195,7 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
                             : t(locale, "prof.switchProfile")}
                         aria-label={`Switch to profile ${profile.sector}`}
                         aria-pressed={running}
-                        style={ICON_BUTTON_STYLE(locked || !profile.enabled, running)}
+                        className={`icon-button${running ? " is-active" : ""}`}
                         onClick={() => void control.selectOnboardProfile(profile.sector)}
                       >
                         {running ? <IconRunning /> : <IconActivate />}
@@ -243,7 +207,7 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
                           ? t(locale, "prof.layoutUnverified")
                           : profile.enabled ? t(locale, "prof.disableProfile") : t(locale, "prof.enableProfile")}
                         aria-label={tp(locale, "prof.toggleProfile", { a: profile.enabled ? t(locale, "prof.disable") : t(locale, "prof.enable"), n: profile.sector })}
-                        style={ICON_BUTTON_STYLE(locked)}
+                        className="icon-button"
                         onClick={() => void control.toggleOnboardProfileEnabled(profile.sector, !profile.enabled)}
                       >
                         {profile.enabled ? <IconEnabled /> : <IconDisabled />}

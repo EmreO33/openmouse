@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { MouseStatus } from "@openmouse/protocol/drivers/mouse-types";
 import { batteryFillWidth, batteryIconState, batteryLevel } from "../ui/battery-icon";
 import { t } from "../i18n";
@@ -18,21 +18,15 @@ export function SwitchButton({
   onChange: (next: boolean) => void;
 }): ReactNode {
   const unsupported = value === null || value === undefined;
-  const style = unsupported
-    ? { background: "#202023", borderColor: "#3a3a3f", color: "#66666b" }
-    : value
-      ? { background: "var(--ui-accent)", borderColor: "var(--ui-accent)", color: "var(--ui-accent-ink)" }
-      : { background: "#202023", borderColor: "#3a3a3f", color: "#8b8b90" };
   return (
     <button
       id={id}
-      className="switch-button"
+      className={`switch-button${unsupported ? "" : value ? " is-on" : ""}`}
       type="button"
       role="switch"
       aria-checked={unsupported ? false : value}
       aria-label={label ? (unsupported ? `${label}, unavailable on this mouse` : label) : undefined}
       disabled={unsupported || disabled}
-      style={style}
       onClick={() => onChange(value !== true)}
     >
       {unsupported ? "N/A" : value ? "On" : "Off"}
@@ -122,7 +116,6 @@ export function RateSlider({
   hidden,
   onChange,
   locale = "en",
-  bubble = true,
 }: {
   id?: string;
   options: number[];
@@ -132,15 +125,12 @@ export function RateSlider({
   hidden?: boolean;
   onChange: (hz: number) => void;
   locale?: InterfaceLocale;
-  /** Hide the floating value readout (used when the card header shows it). */
+  /** Kept for callers that used to hide the readout; buttons always show it. */
   bubble?: boolean;
 }): ReactNode {
-  const [dragging, setDragging] = useState<number | null>(null);
   if (options.length === 0) return <div id={id} className="rate-slider" hidden={hidden} />;
-
-  const exact = options.indexOf(valueHz ?? -1);
-  const settled = exact >= 0
-    ? exact
+  const selected = valueHz !== null && options.includes(valueHz)
+    ? options.indexOf(valueHz)
     : options.reduce(
       (best, rate, step) =>
         Math.abs(rate - (valueHz ?? options[0] ?? 0)) < Math.abs((options[best] ?? 0) - (valueHz ?? options[0] ?? 0))
@@ -148,56 +138,32 @@ export function RateSlider({
           : best,
       0,
     );
-  const index = dragging ?? settled;
-  const last = Math.max(1, options.length - 1);
-  const position = (step: number): string => `calc(7px + (100% - 14px) * ${step} / ${last})`;
-  const fill = `${(index / last) * 100}%`;
 
   return (
-    <div id={id} className={`rate-slider${dragging !== null ? " is-dragging" : ""}`} hidden={hidden}>
+    <div id={id} className="rate-slider" hidden={hidden}>
       {label ? (
         <div className="rate-slider-head">
           <span>{label}</span>
-          <output>{options[index]?.toLocaleString() ?? "—"} Hz</output>
+          <output>{options[selected]?.toLocaleString() ?? "—"} Hz</output>
         </div>
       ) : null}
-      <div className="rate-slider-rail">
-        <input
-          type="range"
-          className="rate-slider-input"
-          style={{ "--fill": fill }}
-          min={0}
-          max={last}
-          step={1}
-          value={index}
-          disabled={disabled}
-          aria-label={label ?? t(locale, "perf.reportRate")}
-          aria-valuetext={`${options[index] ?? 0} Hz`}
-          // "change" fires on release, so a drag stages one change rather than
-          // thirty; "input" only moves the readout and the lit dots.
-          onInput={(event) => setDragging(Number(event.currentTarget.value))}
-          onChange={(event) => {
-            const hz = options[Number(event.currentTarget.value)];
-            setDragging(null);
-            if (hz !== undefined) onChange(hz);
-          }}
-          onBlur={() => setDragging(null)}
-        />
-        {bubble ? (
-          <output className="rate-slider-bubble" style={{ left: position(index) }} aria-hidden="true">
-            {options[index]?.toLocaleString() ?? "—"} Hz
-          </output>
-        ) : null}
-      </div>
-      <div className="rate-slider-scale">
-        {options.map((rate, step) => (
-          <Fragment key={rate}>
-            <i className={step <= index ? "is-on" : ""} style={{ left: position(step) }} />
-            <span className={step === index ? "is-on" : ""} style={{ left: position(step) }}>
+      <div className="rate-slider-buttons" role="group" aria-label={label ?? t(locale, "perf.reportRate")}>
+        {options.map((rate, step) => {
+          const on = step === selected;
+          return (
+            <button
+              key={rate}
+              type="button"
+              className={on ? "is-on" : ""}
+              aria-pressed={on}
+              disabled={disabled}
+              title={`${rate.toLocaleString()} Hz`}
+              onClick={() => onChange(rate)}
+            >
               {shortRate(rate)}
-            </span>
-          </Fragment>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   KEYCHRON_NAPE_BUTTON_ACTIONS,
   KEYCHRON_NAPE_ORIENTATION_OPTIONS,
@@ -10,39 +10,6 @@ import type { ControlSnapshot, NapeAssignmentControl, StagedNapeAssignment } fro
 import { layerLabel, t, tp } from "../i18n";
 import type { InterfaceLocale } from "../interface-preferences";
 import { IconActivate, IconRefresh, IconRunning } from "./icons";
-
-const ROW_STYLE = (open: boolean): CSSProperties => ({
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  padding: ".45rem .6rem",
-  border: `1px solid ${open ? "#4a4a52" : "#26262a"}`,
-  borderRadius: "7px",
-  background: open ? "#1b1b1f" : "#141416",
-});
-
-const OPEN_BUTTON_STYLE: CSSProperties = {
-  display: "flex",
-  gap: ".55rem",
-  alignItems: "center",
-  flex: 1,
-  minWidth: 0,
-  textAlign: "left",
-  background: "none",
-  border: 0,
-  padding: 0,
-  cursor: "pointer",
-};
-
-const ICON_BUTTON_STYLE = (disabled: boolean, active = false): CSSProperties => ({
-  display: "flex",
-  padding: ".3rem",
-  border: `1px solid ${active ? "#4a4a52" : "#3a3a3f"}`,
-  borderRadius: "5px",
-  background: "#19191c",
-  cursor: disabled ? "not-allowed" : "pointer",
-  opacity: disabled ? 0.4 : 1,
-});
 
 const KEY_ROWS = [
   { col: 2, number: "1", name: "01" },
@@ -280,7 +247,7 @@ export function KeychronNapeLayers({ snapshot }: { snapshot: ControlSnapshot }):
       <div id="nape-layer-disclosure-body" className="profile-disclosure-body" ref={body}>
         <div className="profile-disclosure-inner" ref={inner}>
           <div id="nape-layer-list">
-            <small style={{ display: "block", margin: "0 0 .2rem", color: "#5c5c62", fontSize: ".58rem" }}>
+            <small className="profile-list-hint">
               {t(locale, "key.inspectHint")}
             </small>
             {Array.from({ length: count }, (_, index) => {
@@ -291,19 +258,19 @@ export function KeychronNapeLayers({ snapshot }: { snapshot: ControlSnapshot }):
                 .filter(Boolean)
                 .join(" · ");
               return (
-                <div key={layer} style={ROW_STYLE(opened)}>
+                <div key={layer} className={`profile-row${opened ? " is-open" : ""}`}>
                   <button
                     type="button"
                     title={t(locale, "key.openLayer")}
-                    style={OPEN_BUTTON_STYLE}
+                    className="profile-row-open"
                     onClick={() => control.openNapeLayer(layer)}
                   >
                     <span className={`device-dot${running ? "" : " is-idle"}`} />
-                    <span className="profile-row-text" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                      <strong style={{ fontSize: ".72rem", color: "#e6e6ea" }}>
+                    <span className="profile-row-text">
+                      <strong>
                         {layerLabel(locale, keychronLayerLabel(layer))}{rowTags ? ` · ${rowTags}` : ""}
                       </strong>
-                      <small style={{ color: "#77777c", fontSize: ".62rem" }}>
+                      <small>
                         {running ? t(locale, "key.currentLayer") : t(locale, "key.storedLayer")}
                       </small>
                     </span>
@@ -314,7 +281,7 @@ export function KeychronNapeLayers({ snapshot }: { snapshot: ControlSnapshot }):
                     title={running ? t(locale, "key.alreadyLayer") : tp(locale, "key.switchLayer", { label: layerLabel(locale, keychronLayerLabel(layer)) })}
                     aria-label={tp(locale, "key.switchTo", { label: layerLabel(locale, keychronLayerLabel(layer)) })}
                     aria-pressed={running}
-                    style={ICON_BUTTON_STYLE(busy || running, running)}
+                    className={`icon-button${running ? " is-active" : ""}`}
                     onClick={() => void control.switchNapeLayer(layer)}
                   >
                     {running ? <IconRunning /> : <IconActivate />}
