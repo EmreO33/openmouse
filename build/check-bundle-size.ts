@@ -109,7 +109,13 @@ const BUDGET_BYTES: Record<string, number> = {
   // Raised to 1,530 kB for Incott's receiver-LED and rapid-fire card: a new
   // AdvancedCards section plus its availability/control wiring. Measured
   // aggregate is 1,508.0 kB, leaving ~22 kB of headroom.
-  ".js": 1_530_000,
+  // Raised to 1,570 kB for the @openmouse/protocol lockfile bump to ec90f61:
+  // attackshark X11 polling/DPI/battery, MCHOSE A7 V3 settings writes +
+  // product-string naming, and Windows read-restriction fixes all route
+  // through bridge-hid's SUPPORTED_HID_FILTERS, so this grows the bundle
+  // even before the A7 V3 traits work (PR #267) references the new codec
+  // directly. Measured aggregate is 1,545.7 kB, leaving ~24 kB of headroom.
+  ".js": 1_570_000,
 };
 
 const ASSETS = join("dist", "assets");
