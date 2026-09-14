@@ -235,7 +235,9 @@ async function runVision(env, bytes, format, systemPrompt, userPrompt) {
 
 /** First pass — full scored classification of the image. */
 async function screenImage(env, bytes, format) {
-  return parseVerdict(await runVision(env, bytes, format, SCREENING_SYSTEM_PROMPT, "Review this image and output the requested JSON only."));
+  const raw = await runVision(env, bytes, format, SCREENING_SYSTEM_PROMPT, "Review this image and output the requested JSON only.");
+  console.log("artwork screening: raw model response", raw);
+  return parseVerdict(raw);
 }
 
 /** Independent second pass — confirms one specific suspicion before any block. */
@@ -282,7 +284,11 @@ export async function onRequest({ request, env }) {
         aiSkippedByBudget = true;
         return { action: "skip" };
       }
-      const verdict = await screenImage(env, bytes, info.format).catch(() => null);
+      const verdict = await screenImage(env, bytes, info.format).catch((err) => {
+        console.error("artwork screening: screenImage failed", err && err.stack ? err.stack : err);
+        return null;
+      });
+      if (!verdict) console.error("artwork screening: no verdict parsed from model response");
       return screeningDecision(verdict, (category) =>
         claimScreeningSlot(env).then(
           (allowed) => (allowed ? verifyCategory(env, bytes, info.format, category).catch(() => null) : null),
