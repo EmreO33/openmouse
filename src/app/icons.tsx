@@ -1,4 +1,4 @@
-import { CircleDot, Circle, Eye, EyeOff, Link2, Pencil, RefreshCw, Trash2, Unlink2 } from "lucide-react";
+import { CircleDot, Circle, Eye, EyeOff, Link2, Pencil, RefreshCw, Share2, Trash2, Unlink2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function IconEnabled(): ReactNode {
@@ -35,4 +35,8 @@ export function IconRefresh(): ReactNode {
 
 export function IconTrash(): ReactNode {
   return <Trash2 size={13} strokeWidth={1.7} stroke="currentColor" aria-hidden="true" />;
+}
+
+export function IconShare(): ReactNode {
+  return <Share2 size={13} strokeWidth={1.7} stroke="currentColor" aria-hidden="true" />;
 }

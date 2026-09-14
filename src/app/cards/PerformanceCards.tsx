@@ -168,101 +168,113 @@ function AsymmetricLiftOff({ snapshot }: { snapshot: ControlSnapshot }): ReactNo
 
 export function SensorCard({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
   const status = snapshot.status;
-  if (!status) return null;
+  if (!status || !status.gamingSurfaceMode) return null;
   const locale = snapshot.preferences.locale;
-  const ui = status.ui;
-  const pair = status.asymmetricLiftOff;
-  const showPair = pair?.enabled === true;
-  const slotsAvailable = snapshot.profile.slotsAvailable;
-  const lodNeedsSurface = ui?.lodRequiresSurface === true && status.gamingSurfaceMode === "Off";
-  const supportedLods = status.supportedLiftOffDistances;
 
-  const staged = snapshot.pending.keys.some((key) => key === "lift-off-distance" || key === "gaming-surface");
+  const staged = snapshot.pending.keys.some((key) => key === "gaming-surface");
 
   return (
     <article
       className={`setting-card${staged ? " is-staged" : ""}`}
-      data-pending-key="lift-off-distance gaming-surface"
+      data-pending-key="gaming-surface"
     >
-      {status.gamingSurfaceMode ? (
-        <div id="gaming-surface-row">
-          <div className="setting-heading"><div><h2>{t(locale, "perf.gamingSurface")}</h2></div></div>
-          <Segmented
-            className="three"
-            ariaLabel={t(locale, "perf.gamingSurface")}
-            options={(["On", "Off", "Auto"] as const).map((mode) => ({
-              value: mode,
-              label: mode === "Auto" ? t(locale, "perf.auto") : mode === "On" ? t(locale, "common.on") : t(locale, "common.off"),
-            }))}
-            value={status.gamingSurfaceMode}
-            disabled={snapshot.settingsPending}
-            onChange={control.applyGamingSurfaceMode}
-          />
-          <small className="setting-note">
-            {t(locale, "perf.surfaceNote")}
+      <div id="gaming-surface-row">
+        <div className="setting-heading"><div><h2>{t(locale, "perf.gamingSurface")}</h2></div></div>
+        <Segmented
+          className="three"
+          ariaLabel={t(locale, "perf.gamingSurface")}
+          options={(["On", "Off", "Auto"] as const).map((mode) => ({
+            value: mode,
+            label: mode === "Auto" ? t(locale, "perf.auto") : mode === "On" ? t(locale, "common.on") : t(locale, "common.off"),
+          }))}
+          value={status.gamingSurfaceMode}
+          disabled={snapshot.settingsPending}
+          onChange={control.applyGamingSurfaceMode}
+        />
+        <small className="setting-note">
+          {t(locale, "perf.surfaceNote")}
+        </small>
+      </div>
+    </article>
+  );
+}
+
+export function hasLiftOff(snapshot: ControlSnapshot): boolean {
+  const status = snapshot.status;
+  if (!status || snapshot.profile.slotsAvailable) return false;
+  return Boolean(status.asymmetricLiftOff)
+    || Boolean(status.liftOffScale)
+    || status.liftOffDistance != null
+    || (Array.isArray(status.supportedLiftOffDistances) && status.supportedLiftOffDistances.length > 0);
+}
+
+export function LiftOffDistance({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+  const status = snapshot.status;
+  if (!status || !hasLiftOff(snapshot)) return null;
+  const locale = snapshot.preferences.locale;
+  const ui = status.ui;
+  const pair = status.asymmetricLiftOff;
+  const showPair = pair?.enabled === true;
+  const lodNeedsSurface = ui?.lodRequiresSurface === true && status.gamingSurfaceMode === "Off";
+  const supportedLods = status.supportedLiftOffDistances;
+
+  return (
+    <div id="host-lod-row">
+      <div className="setting-heading">
+        <div>
+          <div className="title-row">
+            <h2>{t(locale, "perf.liftOff")}</h2>
+            <p>SENSOR</p>
+          </div>
+          <small id="lod-note" className="setting-note">
+            {lodNeedsSurface ? t(locale, "perf.lodNeedSurface") : t(locale, "perf.lodNote")}
           </small>
+        </div>
+      </div>
+      {pair ? (
+        <div id="lod-mode-row" className="lod-mode">
+          <Segmented
+            className="two"
+            ariaLabel={t(locale, "perf.liftOffMode")}
+            options={[
+              { value: "single", label: t(locale, "perf.single") },
+              { value: "asymmetric", label: t(locale, "perf.asymmetric") },
+            ]}
+            value={pair.enabled === null ? null : showPair ? "asymmetric" : "single"}
+            disabled={snapshot.settingsPending}
+            onChange={control.applyLiftOffMode}
+          />
         </div>
       ) : null}
 
-      {slotsAvailable ? null : (
-        <div id="host-lod-row">
-          <div className="setting-heading">
-            <div>
-              <div className="title-row">
-                <h2>{t(locale, "perf.liftOff")}</h2>
-                <p>SENSOR</p>
-              </div>
-              <small id="lod-note" className="setting-note">
-                {lodNeedsSurface ? t(locale, "perf.lodNeedSurface") : t(locale, "perf.lodNote")}
-              </small>
-            </div>
-          </div>
-          {pair ? (
-            <div id="lod-mode-row" className="lod-mode">
-              <Segmented
-                className="two"
-                ariaLabel={t(locale, "perf.liftOffMode")}
-                options={[
-                  { value: "single", label: t(locale, "perf.single") },
-                  { value: "asymmetric", label: t(locale, "perf.asymmetric") },
-                ]}
-                value={pair.enabled === null ? null : showPair ? "asymmetric" : "single"}
-                disabled={snapshot.settingsPending}
-                onChange={control.applyLiftOffMode}
-              />
-            </div>
-          ) : null}
-
-          {pair && showPair ? (
-            <AsymmetricLiftOff snapshot={snapshot} />
-          ) : status.liftOffScale ? (
-            <LiftOffScale snapshot={snapshot} />
-          ) : (
-            <div id="lod-single">
-              <Segmented
-                className="three"
-                ariaLabel={t(locale, "perf.liftOff")}
-                options={LOD_LEVELS.map((level) => {
-                  const hideLow = level === "Low" && (snapshot.traits.eggFamily || ui?.hideLodLow === true);
-                  const unsupported = Array.isArray(supportedLods) && !supportedLods.includes(level);
-                  const legacyLogitechLow = snapshot.traits.logitech
-                    && !Array.isArray(supportedLods)
-                    && level === "Low";
-                  return {
-                    value: level,
-                    label: lodLabel(locale, level),
-                    hidden: hideLow || unsupported,
-                    disabled: snapshot.settingsPending || legacyLogitechLow || lodNeedsSurface,
-                  };
-                })}
-                value={status.liftOffDistance}
-                onChange={control.applyLiftOffDistance}
-              />
-            </div>
-          )}
+      {pair && showPair ? (
+        <AsymmetricLiftOff snapshot={snapshot} />
+      ) : status.liftOffScale ? (
+        <LiftOffScale snapshot={snapshot} />
+      ) : (
+        <div id="lod-single">
+          <Segmented
+            className="three"
+            ariaLabel={t(locale, "perf.liftOff")}
+            options={LOD_LEVELS.map((level) => {
+              const hideLow = level === "Low" && (snapshot.traits.eggFamily || ui?.hideLodLow === true);
+              const unsupported = Array.isArray(supportedLods) && !supportedLods.includes(level);
+              const legacyLogitechLow = snapshot.traits.logitech
+                && !Array.isArray(supportedLods)
+                && level === "Low";
+              return {
+                value: level,
+                label: lodLabel(locale, level),
+                hidden: hideLow || unsupported,
+                disabled: snapshot.settingsPending || legacyLogitechLow || lodNeedsSurface,
+              };
+            })}
+            value={status.liftOffDistance}
+            onChange={control.applyLiftOffDistance}
+          />
         </div>
       )}
-    </article>
+    </div>
   );
 }
 

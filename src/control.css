@@ -828,6 +828,12 @@ nav { display: grid; gap: .3rem; margin-top: 1.4rem; }
 .setting-card { padding: 1.5rem; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--card); }
 .setting-card button:disabled { cursor: default; opacity: 1; }
 .dpi-card { grid-row: span 2; }
+.dpi-card.has-lift-off { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 1.1rem; }
+.dpi-card.has-lift-off > .dpi-card-lift { padding-left: 1.1rem; border-left: 1px solid var(--line-soft); }
+@media (max-width: 980px) {
+  .dpi-card.has-lift-off { grid-template-columns: minmax(0, 1fr); }
+  .dpi-card.has-lift-off > .dpi-card-lift { padding-left: 0; padding-top: .9rem; border-left: 0; border-top: 1px solid var(--line-soft); }
+}
 .setting-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; }
 .setting-heading.compact { margin-bottom: .55rem; }
 .setting-heading.tight { margin-bottom: .35rem; }
@@ -1163,7 +1169,7 @@ nav { display: grid; gap: .3rem; margin-top: 1.4rem; }
    the two read as the same device. */
 .performance-layout {
   display: grid;
-  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-columns: 340px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   width: 100%;
@@ -1224,7 +1230,7 @@ nav { display: grid; gap: .3rem; margin-top: 1.4rem; }
 .showcase-sidebar-image {
   display: block;
   width: 100%;
-  max-height: 560px;
+  max-height: 640px;
   object-fit: contain;
   filter: drop-shadow(0 0 20px color-mix(in srgb, var(--ui-accent) 18%, transparent));
 }
@@ -1812,6 +1818,58 @@ body { height: 100vh; overflow: hidden; }
 }
 .app-sidebar-bottom .connect-nav.active { color: var(--ui-accent); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   Sidebar rail collapse — on the dashboard the sidebar shrinks to a
+   pure-icon rail with a floating chevron on its edge; clicking it pops
+   the full sidebar out (and back). Labels, brand text and per-item chevrons
+   hide, leaving only the colored glyphs centered in the rail. */
+.app-sidebar-collapse-toggle {
+  position: absolute;
+  top: 50%;
+  right: -0.875rem;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
+  background: var(--surface-dialog);
+  color: var(--dim);
+  box-shadow:
+    0 2px 8px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.05);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.app-sidebar-collapse-toggle:hover {
+  background: var(--surface-strong);
+  color: var(--bright);
+  transform: translateY(-50%) translateX(2px);
+}
+.control-shell.sidebar-collapsed { grid-template-columns: 4.5rem minmax(0, 1fr); }
+.control-shell.sidebar-collapsed .app-sidebar {
+  width: 3.5rem;
+  padding: 0.75rem 0.25rem;
+}
+.control-shell.sidebar-collapsed .app-sidebar-top { gap: 1.1rem; }
+.control-shell.sidebar-collapsed .app-sidebar-brand {
+  justify-content: center;
+  padding: 0;
+}
+.control-shell.sidebar-collapsed .app-sidebar-brand-text,
+.control-shell.sidebar-collapsed .app-sidebar-brand-version,
+.control-shell.sidebar-collapsed .app-sidebar-nav-label,
+.control-shell.sidebar-collapsed .app-sidebar-nav-arrow,
+.control-shell.sidebar-collapsed .app-sidebar-nav-sep { display: none; }
+.control-shell.sidebar-collapsed .app-sidebar-nav-item {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+
 /* Page container */
 .control-panel .page-overview {
   width: 100%;
@@ -1887,45 +1945,175 @@ body { height: 100vh; overflow: hidden; }
   font-size: 0.9rem;
   color: var(--faint);
 }
-.device-showcase-visual {
+.device-diagram {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 auto 1.25rem;
+}
+/* The artwork sits in the middle canvas (sized to the image's own aspect
+   ratio); the pills live in their own rails beside it so they never overlap
+   the artwork. Leader lines end at the canvas edge, right at the pill. */
+.device-diagram-rail {
+  position: relative;
+  flex: 0 0 auto;
+  width: 12.5rem;
+  min-width: 0;
+}
+.device-diagram-rail--left { text-align: left; }
+.device-diagram-rail--right { text-align: right; }
+.device-diagram-canvas {
+  position: relative;
+  flex: 0 0 auto;
+}
+.device-diagram-art {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 480px;
-  max-width: 100%;
-  height: 320px;
-  margin-bottom: 1.25rem;
+  pointer-events: none;
 }
-.device-showcase-image {
-  max-width: 100%;
-  max-height: 100%;
+.device-diagram-art .device-showcase-image {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 22px 32px rgb(0 0 0 / 45%));
 }
-.device-showcase-status {
+.device-diagram-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+.device-diagram-lines polyline {
+  fill: none;
+  stroke: var(--faint);
+  stroke-width: 1.5;
+  animation: device-diagram-draw 0.55s cubic-bezier(0.33, 1, 0.68, 1) 0.28s both;
+}
+.device-diagram-dot {
+  position: absolute;
+  z-index: 2;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-accent) 22%, transparent);
+  transform: translate(-50%, -50%);
+}
+@keyframes device-diagram-draw {
+  from { stroke-dasharray: 600; stroke-dashoffset: 600; }
+  to   { stroke-dasharray: 600; stroke-dashoffset: 0; }
+}
+.device-diagram-chip {
+  position: absolute;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.5rem 0.95rem;
-  border: 1px solid var(--border);
+  transform: translateY(-50%);
+  padding: 0.38rem 0.9rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ui-accent) 8%, var(--surface-panel-strong));
-  font-size: 0.85rem;
-  color: var(--success);
+  background: var(--surface-strong);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 28%);
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.device-diagram-chip--left {
+  left: auto;
+  right: 0.4rem;
+  animation: device-diagram-chip-in-l 0.32s ease both;
+}
+.device-diagram-chip--right {
+  left: 0.4rem;
+  right: auto;
+  animation: device-diagram-chip-in-r 0.32s ease both;
+}
+.device-diagram-chip-label {
+  color: var(--text-soft);
+  font-size: 0.6rem;
   font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.device-diagram-chip-value {
+  color: var(--bright);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+@keyframes device-diagram-chip-in-l {
+  from { opacity: 0; transform: translateY(-50%) translateX(6px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+@keyframes device-diagram-chip-in-r {
+  from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 .device-showcase-status-detail {
   color: var(--faint);
   font-weight: 400;
-}
-.device-showcase-status .battery-icon {
-  width: 1.65rem;
 }
 .device-showcase-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--success);
+}
+
+/* Device-display travel between workspace tabs. Each tab panel mounts fresh,
+   so the device artwork glides in from the other layout's side with a blur-in
+   and a themed accent-glow sweep — entering the left performance sidebar it
+   arrives from the right (as if returning from the centered overview), and
+   entering the overview it arrives from the left (as if returning from the
+   sidebar). Pure CSS entrance animation: runs in every browser and webview
+   with no API or framework involvement; disabled only by the shared
+   reduce-motion rule. */
+@keyframes device-display-into-left {
+  0%   { transform: translate(26vw, 3vh) scale(1.1); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+@keyframes device-display-back-home {
+  0%   { transform: translate(-26vw, -3vh) scale(1.1); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+@keyframes device-glow-sidebar {
+  0%   { filter: blur(10px) drop-shadow(0 0 20px color-mix(in srgb, var(--ui-accent) 18%, transparent)); }
+  45%  { filter: blur(0) drop-shadow(0 0 30px color-mix(in srgb, var(--ui-accent) 55%, transparent)); }
+  100% { filter: blur(0) drop-shadow(0 0 20px color-mix(in srgb, var(--ui-accent) 18%, transparent)); }
+}
+@keyframes device-glow-showcase {
+  0%   { filter: blur(10px) drop-shadow(0 22px 32px rgb(0 0 0 / 45%)) drop-shadow(0 0 0 color-mix(in srgb, var(--ui-accent) 0%, transparent)); }
+  45%  { filter: blur(0) drop-shadow(0 22px 32px rgb(0 0 0 / 45%)) drop-shadow(0 0 26px color-mix(in srgb, var(--ui-accent) 55%, transparent)); }
+  100% { filter: blur(0) drop-shadow(0 22px 32px rgb(0 0 0 / 45%)) drop-shadow(0 0 20px color-mix(in srgb, var(--ui-accent) 18%, transparent)); }
+}
+.control-shell .showcase-sidebar-image {
+  animation:
+    device-display-into-left .7s cubic-bezier(.22, .61, .36, 1) both,
+    device-glow-sidebar .7s ease both;
+}
+.control-shell .device-showcase-image {
+  animation:
+    device-display-back-home .7s cubic-bezier(.22, .61, .36, 1) both,
+    device-glow-showcase .7s ease both;
+}
+/* The freshly mounted panel content settles in with a quiet rise while the
+   artwork's longer sweep plays on top — reads as one continuous glide. */
+@keyframes workspace-panel-enter {
+  from { opacity: .001; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.control-shell [data-workspace-host] {
+  animation: workspace-panel-enter .38s ease both;
 }
 
 /* Artwork request trigger button (missing-art devices) */
@@ -1953,60 +2141,6 @@ body { height: 100vh; overflow: hidden; }
 .artwork-upload-trigger:focus-visible {
   outline: 2px solid var(--ui-accent);
   outline-offset: 1px;
-}
-
-/* Info sections (Current status / device information) */
-.info-section {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-  background: var(--card);
-  margin-bottom: 0.75rem;
-}
-.info-section-title {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.75rem;
-}
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem 2rem;
-}
-.info-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.35rem 0;
-}
-.info-row + .info-row { border-top: 1px solid var(--line-soft); }
-.info-label {
-  font-size: 0.8rem;
-  color: var(--faint);
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  white-space: nowrap;
-}
-.info-value {
-  font-size: 0.85rem;
-  color: var(--bright);
-  font-weight: 500;
-  text-align: right;
-}
-.info-value-sub {
-  font-size: 0.75rem;
-  color: var(--faint);
-  font-weight: 400;
-}
-.info-value-mono {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
 }
 
 /* ── Welcome screen (empty / no device) ─────────────────────────────── */
@@ -2413,23 +2547,34 @@ body { height: 100vh; overflow: hidden; }
   top: 50%;
   transform: translateY(-50%);
 }
-.device-tab-back-right {
-  left: auto;
+.device-tab-back:hover {
+  color: var(--bright);
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+/* The Profiles section lives off the pill row, pinned to the bar's right edge
+   where the old share button sat. It keeps the shared pill chrome but reads
+   as the primary Call-To-Action in accent so the tab still stands out. */
+.device-tab-profiles-nav {
+  position: absolute;
   right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   border: 1px solid var(--ui-accent);
   background: var(--ui-accent);
   color: var(--ui-accent-ink);
 }
-.device-tab-back-right:hover:not(:disabled) {
+.device-tab-profiles-nav:hover:not(:disabled) {
   color: var(--ui-accent-ink);
   border-color: var(--ui-accent);
   background: color-mix(in srgb, var(--ui-accent) 80%, #ffffff);
   filter: none;
 }
-.device-tab-back:hover {
-  color: var(--bright);
-  border-color: var(--line-strong);
-  background: var(--hover);
+.device-tab-profiles-nav.active {
+  color: var(--ui-accent-ink);
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-accent-ink) 30%, transparent);
 }
 
 /* Device grid (landing view) — Logitech-G-HUB style tiles */

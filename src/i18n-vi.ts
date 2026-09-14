@@ -14,6 +14,8 @@ export const vi: Record<I18nKey, string> = {
   "nav.docs": "Tài liệu",
   "nav.supported": "Thiết bị được hỗ trợ",
   "nav.whatsNew": "Có gì mới",
+  "nav.expand": "Mở rộng thanh bên",
+  "nav.collapse": "Thu gọn thanh bên",
   "side.selectedDevice": "THIẾT BỊ ĐÃ CHỌN",
   "side.connectedMouse": "Chuột đã kết nối",
   "side.connected": "Đã kết nối",

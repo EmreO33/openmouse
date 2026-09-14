@@ -27,6 +27,7 @@ export function App(): ReactNode {
   const [artworkDeviceName, setArtworkDeviceName] = useState("");
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [page, setPage] = useState<DesktopPage>("home");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { preferences, status } = snapshot;
   const locale = preferences.locale;
 
@@ -70,6 +71,10 @@ export function App(): ReactNode {
     panel.current?.scrollTo({ top: 0, behavior: preferences.reducedMotion ? "auto" : "smooth" });
   }, [page, snapshot.workspaceTab, preferences.reducedMotion]);
 
+  useEffect(() => {
+    setSidebarCollapsed(resolvedPage === "dashboard");
+  }, [resolvedPage]);
+
   function openArtworkRequest(): void {
     if (snapshot.status?.name) setArtworkDeviceName(snapshot.status.name);
     setArtworkReqOpen(true);
@@ -100,13 +105,14 @@ export function App(): ReactNode {
         "control-shell",
         "full-desktop-shell",
         status ? "" : "is-empty",
+        sidebarCollapsed ? "sidebar-collapsed" : "",
         preferences.reducedMotion ? "reduce-interface-motion" : "",
         snapshot.pending.count > 0 ? "has-pending-changes" : "",
       ].filter(Boolean).join(" ")}
       data-interface-theme={interfaceThemeSlug(preferences.theme)}
     >
       <NewsBanner locale={locale} />
-      <AppSidebar snapshot={snapshot} page={resolvedPage} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
+      <AppSidebar snapshot={snapshot} page={resolvedPage} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
 
       <main className="full-desktop-main">
         <div className="full-desktop-content" ref={panel}>

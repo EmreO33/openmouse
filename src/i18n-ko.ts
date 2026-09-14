@@ -14,6 +14,8 @@ export const ko: Record<I18nKey, string> = {
   "nav.docs": "문서",
   "nav.supported": "지원 장치",
   "nav.whatsNew": "새로운 기능",
+  "nav.expand": "사이드바 펼치기",
+  "nav.collapse": "사이드바 접기",
   "side.selectedDevice": "선택된 장치",
   "side.connectedMouse": "연결된 마우스",
   "side.connected": "연결됨",

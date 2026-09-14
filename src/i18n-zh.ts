@@ -14,6 +14,8 @@ export const zh: Record<I18nKey, string> = {
   "nav.docs": "文档",
   "nav.supported": "支持的设备",
   "nav.whatsNew": "新功能",
+  "nav.expand": "展开侧边栏",
+  "nav.collapse": "收起侧边栏",
   "side.selectedDevice": "已选设备",
   "side.connectedMouse": "已连接鼠标",
   "side.connected": "已连接",

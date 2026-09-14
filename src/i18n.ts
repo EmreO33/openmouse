@@ -17,6 +17,8 @@ const en = {
   "nav.docs": "Docs",
   "nav.supported": "Supported devices",
   "nav.whatsNew": "What's New",
+  "nav.expand": "Expand sidebar",
+  "nav.collapse": "Collapse sidebar",
   "side.selectedDevice": "SELECTED DEVICE",
   "side.connectedMouse": "Connected mouse",
   "side.connected": "Connected",

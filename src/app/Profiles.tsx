@@ -5,9 +5,15 @@ import * as control from "../device/controller";
 import type { ControlSnapshot } from "../device/types";
 import { hidKeyForCode, shortcutLabel } from "./hid-keys";
 import { t, tp } from "../i18n";
-import { IconActivate, IconDisabled, IconEnabled, IconRefresh, IconRename, IconRunning, IconTrash } from "./icons";
+import { IconActivate, IconDisabled, IconEnabled, IconRefresh, IconRename, IconRunning, IconShare, IconTrash } from "./icons";
 
-export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+export function Profiles({
+  snapshot,
+  onShareProfile,
+}: {
+  snapshot: ControlSnapshot;
+  onShareProfile: () => void;
+}): ReactNode {
   const [assignmentLayer, setAssignmentLayer] = useState<"primary" | "g-shift">("primary");
   const [shortcutTarget, setShortcutTarget] = useState<{ layer: "primary" | "g-shift"; button: number } | null>(null);
   const [shortcutSteps, setShortcutSteps] = useState<Array<{ key: number; modifiers: number; label: string; delayMs: number }>>([]);
@@ -68,6 +74,15 @@ export function Profiles({ snapshot }: { snapshot: ControlSnapshot }): ReactNode
           onClick={() => void control.reloadOnboardProfiles()}
         >
           <IconRefresh />
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={t(locale, "panel.shareProfile")}
+          title={t(locale, "panel.shareProfile")}
+          onClick={onShareProfile}
+        >
+          <IconShare />
         </button>
         {snapshot.resetProfilesAvailable ? (
           <button

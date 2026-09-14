@@ -14,6 +14,8 @@ export const ru: Record<I18nKey, string> = {
   "nav.docs": "Документация",
   "nav.supported": "Поддерживаемые устройства",
   "nav.whatsNew": "Что нового",
+  "nav.expand": "Развернуть панель",
+  "nav.collapse": "Свернуть панель",
   "side.selectedDevice": "ВЫБРАННОЕ УСТРОЙСТВО",
   "side.connectedMouse": "Подключённая мышь",
   "side.connected": "Подключена",

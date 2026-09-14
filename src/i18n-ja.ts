@@ -14,6 +14,8 @@ export const ja: Record<I18nKey, string> = {
   "nav.docs": "ドキュメント",
   "nav.supported": "対応デバイス",
   "nav.whatsNew": "新着情報",
+  "nav.expand": "サイドバーを展開",
+  "nav.collapse": "サイドバーを折りたたむ",
   "side.selectedDevice": "選択中のデバイス",
   "side.connectedMouse": "接続中のマウス",
   "side.connected": "接続済み",

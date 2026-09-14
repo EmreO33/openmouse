@@ -1,4 +1,4 @@
-import { Activity, ChevronRight, FileText, House, MessageSquare, Mouse, Settings as SettingsIcon, Star, type LucideIcon } from "lucide-react";
+import { Activity, ChevronLeft, ChevronRight, FileText, House, MessageSquare, Mouse, Settings as SettingsIcon, Star, type LucideIcon } from "lucide-react";
 import { type ReactNode } from "react";
 import type { ControlSnapshot } from "../device/types";
 import { t } from "../i18n";
@@ -18,19 +18,37 @@ function NavArrow(): ReactNode {
 export function AppSidebar({
   snapshot,
   page,
+  collapsed,
+  onToggleCollapsed,
   onNavigate,
   onOpenFeedback,
   onOpenWhatsNew,
 }: {
   snapshot: ControlSnapshot;
   page: DesktopPage;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onNavigate: (page: DesktopPage) => void;
   onOpenFeedback: () => void;
   onOpenWhatsNew: () => void;
 }): ReactNode {
   const locale = snapshot.preferences.locale;
   return (
-    <aside className="app-sidebar">
+    <aside className={`app-sidebar${collapsed ? " app-sidebar-collapsed" : ""}`}>
+      {page === "dashboard" ? (
+        <button
+          type="button"
+          className="app-sidebar-collapse-toggle"
+          title={collapsed ? t(locale, "nav.expand") : t(locale, "nav.collapse")}
+          onClick={onToggleCollapsed}
+        >
+          {collapsed ? (
+            <ChevronRight size={16} strokeWidth={2.4} aria-hidden="true" />
+          ) : (
+            <ChevronLeft size={16} strokeWidth={2.4} aria-hidden="true" />
+          )}
+        </button>
+      ) : null}
       <div className="app-sidebar-top">
         <a
           className="app-sidebar-brand"

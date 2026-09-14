@@ -14,6 +14,8 @@ export const de: Record<I18nKey, string> = {
   "nav.docs": "Doku",
   "nav.supported": "Unterstützte Geräte",
   "nav.whatsNew": "Was ist neu",
+  "nav.expand": "Sidebar erweitern",
+  "nav.collapse": "Sidebar einklappen",
   "side.selectedDevice": "AUSGEWÄHLTES GERÄT",
   "side.connectedMouse": "Verbundene Maus",
   "side.connected": "Verbunden",

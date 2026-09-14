@@ -14,6 +14,8 @@ export const fr: Record<I18nKey, string> = {
   "nav.docs": "Documentation",
   "nav.supported": "Appareils compatibles",
   "nav.whatsNew": "Nouveautés",
+  "nav.expand": "Développer la barre latérale",
+  "nav.collapse": "Réduire la barre latérale",
   "side.selectedDevice": "APPAREIL SÉLECTIONNÉ",
   "side.connectedMouse": "Souris connectée",
   "side.connected": "Connectée",

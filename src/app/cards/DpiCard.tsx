@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  PROFILE_STAGE_LOD,
   capabilitiesForFormat,
   stageLodLevel,
 } from "@openmouse/protocol/drivers/logitech/onboard-profiles";
@@ -8,6 +7,7 @@ import * as control from "../../device/controller";
 import type { ControlSnapshot, LiftOffLevel } from "../../device/types";
 import { closestDpiOption, dpiPresetValues } from "../../dpi-presets";
 import { t, tp } from "../../i18n";
+import { LiftOffDistance, hasLiftOff } from "./PerformanceCards";
 
 const MAX_EDITOR_ROWS = 4;
 const DEFAULT_LOD = 2;
@@ -57,28 +57,10 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
   };
 
   const [rows, setRows] = useState<StageRow[]>(initRows);
-  const [openMenu, setOpenMenu] = useState<number | null>(null);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
   const touchedRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const levels = isLogitech && snapshot.profileFormat ? capabilitiesForFormat(snapshot.profileFormat.id).supportedLods : [];
-  const profileHasLod = levels.length > 0;
-
-  useEffect(() => {
-    if (openMenu === null) return;
-    const close = (): void => setOpenMenu(null);
-    const key = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setOpenMenu(null);
-    };
-    document.addEventListener("click", close);
-    document.addEventListener("keydown", key);
-    return () => {
-      document.removeEventListener("click", close);
-      document.removeEventListener("keydown", key);
-    };
-  }, [openMenu]);
 
   useEffect(() => {
     return () => {
@@ -113,8 +95,19 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
 
   const commit = (next: StageRow[]): void => {
     if (mode === "logitech") {
+      // Lift-off lives in the slot plan itself now (edited from the dedicated
+      // side panel), so a DPI-value commit must not clobber it with the local
+      // row copy. Enabled rows map 1:1 to plan stages in order.
+      const planLods = snapshot.dpiSlotPlan?.stages.map((stage) => stage.lod) ?? [];
       control.applyDpiSlotEditor(
-        next.map((row) => ({ enabled: row.enabled, value: parseRow(row.value) ?? (limits?.minDpi ?? 100), lod: row.lod })),
+        next.map((row, index) => {
+          const position = next.slice(0, index).filter((entry) => entry.enabled).length;
+          return {
+            enabled: row.enabled,
+            value: parseRow(row.value) ?? (limits?.minDpi ?? 100),
+            lod: planLods[position] ?? row.lod,
+          };
+        }),
       );
       return;
     }
@@ -179,14 +172,6 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
 
   const setSlider = (index: number, numeric: number): void => setValue(index, String(numeric));
 
-  const setLod = (index: number, level: LiftOffLevel): void => {
-    const value = PROFILE_STAGE_LOD[level];
-    const next = rows.map((row, i) => (i === index ? { ...row, lod: value } : row));
-    setRows(next);
-    rowsRef.current = next;
-    markEdited(next);
-  };
-
   const setActive = (index: number): void => {
     if (!rows[index].enabled) return;
     if (mode === "logitech") {
@@ -250,7 +235,6 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
       <div id="dpi-editor-list" className="dpi-editor-list">
         {rows.map((row, index) => {
           const slider = sliderFor(row);
-          const level = mode === "logitech" ? stageLodLevel(row.lod) : null;
           const isActive = mode === "stage" ? compactIndex(index) === (status?.activeDpiStage ?? 0) : null;
           const isStarting = mode === "logitech" && snapshot.dpiSlotPlan
             ? compactIndex(index) === snapshot.dpiSlotPlan.defaultIndex
@@ -298,50 +282,94 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
                 disabled={locked}
                 onChange={(event) => sliderCommit(index, Number(event.currentTarget.value))}
               />
-              {mode === "logitech" ? (
-                profileHasLod ? (
-                  <div className={`lod-select dpi-editor-lod${openMenu === index ? " is-open" : ""}`}>
-                    <button
-                      type="button"
-                      className="lod-select-value"
-                      disabled={locked}
-                      aria-haspopup="listbox"
-                      aria-expanded={openMenu === index}
-                      aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}
-                      title={t(locale, "dpi.liftOffTitle")}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setOpenMenu(openMenu === index ? null : index);
-                      }}
-                    >
-                      <span>{level ?? "—"}</span>
-                      <i aria-hidden="true" />
-                    </button>
-                    <ul className="lod-select-menu" role="listbox" aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}>
-                      {levels.map((name) => (
-                        <li
-                          key={name}
-                          role="option"
-                          aria-selected={name === level}
-                          onClick={() => {
-                            setOpenMenu(null);
-                            setLod(index, name as LiftOffLevel);
-                          }}
-                        >
-                          {name}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <output className="dpi-editor-lod-none">—</output>
-                )
-              ) : null}
             </div>
           );
         })}
       </div>
       <small className="setting-note">{note}</small>
+    </div>
+  );
+}
+
+export function SlotLiftOffPanel({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
+  const status = snapshot.status;
+  if (!status) return null;
+  const locale = snapshot.preferences.locale;
+  const stages = snapshot.dpiSlotPlan?.stages ?? [];
+  const locked = snapshot.profile.slotsLocked;
+  const levels = snapshot.profileFormat ? capabilitiesForFormat(snapshot.profileFormat.id).supportedLods : [];
+  const [openMenu, setOpenMenu] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openMenu === null) return;
+    const close = (): void => setOpenMenu(null);
+    const key = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setOpenMenu(null);
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", key);
+    };
+  }, [openMenu]);
+
+  return (
+    <div id="host-lod-row">
+      <div className="setting-heading">
+        <div>
+          <div className="title-row">
+            <h2>{t(locale, "perf.liftOff")}</h2>
+            <p>SENSOR</p>
+          </div>
+          <small id="lod-note" className="setting-note">
+            {t(locale, "perf.lodNote")}
+          </small>
+        </div>
+      </div>
+      <div className="slot-lod-list">
+        {stages.map((stage, index) => {
+          const level = stageLodLevel(stage.lod);
+          return (
+            <div key={index} className="slot-lod-row">
+              <span className="slot-lod-index">{index + 1}</span>
+              <div className={`lod-select dpi-editor-lod${openMenu === index ? " is-open" : ""}`}>
+                <button
+                  type="button"
+                  className="lod-select-value"
+                  disabled={locked}
+                  aria-haspopup="listbox"
+                  aria-expanded={openMenu === index}
+                  aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}
+                  title={t(locale, "dpi.liftOffTitle")}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenMenu(openMenu === index ? null : index);
+                  }}
+                >
+                  <span>{level ?? "—"}</span>
+                  <i aria-hidden="true" />
+                </button>
+                <ul className="lod-select-menu" role="listbox" aria-label={tp(locale, "dpi.slotLiftOff", { n: index + 1 })}>
+                  {levels.map((name) => (
+                    <li
+                      key={name}
+                      role="option"
+                      aria-selected={name === level}
+                      onClick={() => {
+                        setOpenMenu(null);
+                        control.setDpiSlotLod(index, name as LiftOffLevel);
+                      }}
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -355,68 +383,79 @@ export function DpiCard({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
     || snapshot.pending.keys.includes("dpi-stage-count")
     || snapshot.pending.keys.includes("dpi-active-stage")
     || snapshot.pending.keys.includes("logitech-dpi-slots")
-    || snapshot.pending.keys.some((key) => key.startsWith("dpi-stage-"));
+    || snapshot.pending.keys.some((key) => key.startsWith("dpi-stage-"))
+    || snapshot.pending.keys.includes("lift-off-distance");
   const slotsAvailable = snapshot.profile.slotsAvailable;
+  const slotLods = snapshot.profileFormat ? capabilitiesForFormat(snapshot.profileFormat.id).supportedLods : [];
+  const showLiftOff = slotsAvailable ? slotLods.length > 0 : hasLiftOff(snapshot);
 
   const label = (source: typeof status): string => `${source.dpi.toLocaleString()} DPI`;
 
   return (
     <article
-      className={`setting-card dpi-card${staged ? " is-staged" : ""}`}
-      data-pending-key="dpi dpi-stage-count dpi-active-stage logitech-dpi-slots"
+      className={`setting-card dpi-card${staged ? " is-staged" : ""}${showLiftOff ? " has-lift-off" : ""}`}
+      data-pending-key="dpi dpi-stage-count dpi-active-stage logitech-dpi-slots lift-off-distance"
     >
-      <div className="setting-heading">
-        <div>
-          <p>DPI</p>
-          <h2>
-            {t(locale, "dpi.sensitivity")}
-            {snapshot.editedProfile !== null ? (
-              <span className="setting-scope" id="dpi-scope-badge">{slotsAvailable ? t(locale, "dpi.perProfile") : "Host"}</span>
-            ) : null}
-          </h2>
+      <div className="dpi-card-main">
+        <div className="setting-heading">
+          <div>
+            <p>DPI</p>
+            <h2>
+              {t(locale, "dpi.sensitivity")}
+              {snapshot.editedProfile !== null ? (
+                <span className="setting-scope" id="dpi-scope-badge">{slotsAvailable ? t(locale, "dpi.perProfile") : "Host"}</span>
+              ) : null}
+            </h2>
+          </div>
+          <div className="dpi-header-actions">
+            <input
+              id="dpi-output"
+              type="text"
+              inputMode="numeric"
+              value={snapshot.settingsPending ? "—" : snapshot.customDpiText}
+              aria-label={t(locale, "dpi.value")}
+              readOnly={!snapshot.customDpiEditing}
+              onChange={(event) => control.setCustomDpiText(event.currentTarget.value)}
+              onClick={() => {
+                if (!snapshot.customDpiEditing) control.startCustomDpi();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  control.commitCustomDpi();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  control.cancelCustomDpi();
+                }
+              }}
+            />
+            <button
+              id="custom-dpi"
+              type="button"
+              hidden={slotsAvailable}
+              disabled={snapshot.settingsPending || snapshot.dpiOptions.length === 0}
+              onClick={() => (snapshot.customDpiEditing ? control.commitCustomDpi() : control.startCustomDpi())}
+            >
+              {snapshot.customDpiEditing ? t(locale, "common.apply") : t(locale, "common.custom")}
+            </button>
+          </div>
         </div>
-        <div className="dpi-header-actions">
-          <input
-            id="dpi-output"
-            type="text"
-            inputMode="numeric"
-            value={snapshot.settingsPending ? "—" : snapshot.customDpiText}
-            aria-label={t(locale, "dpi.value")}
-            readOnly={!snapshot.customDpiEditing}
-            onChange={(event) => control.setCustomDpiText(event.currentTarget.value)}
-            onClick={() => {
-              if (!snapshot.customDpiEditing) control.startCustomDpi();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                control.commitCustomDpi();
-              }
-              if (event.key === "Escape") {
-                event.preventDefault();
-                control.cancelCustomDpi();
-              }
-            }}
-          />
-          <button
-            id="custom-dpi"
-            type="button"
-            hidden={slotsAvailable}
-            disabled={snapshot.settingsPending || snapshot.dpiOptions.length === 0}
-            onClick={() => (snapshot.customDpiEditing ? control.commitCustomDpi() : control.startCustomDpi())}
-          >
-            {snapshot.customDpiEditing ? t(locale, "common.apply") : t(locale, "common.custom")}
-          </button>
+
+        <DpiStageEditor snapshot={snapshot} />
+
+        <div className="setting-action">
+          <span id="dpi-pending">
+            {staged ? tp(locale, "common.staged", { v: label(status) }) : tp(locale, "common.current", { v: label(deviceStatus) })}
+          </span>
         </div>
       </div>
 
-      <DpiStageEditor snapshot={snapshot} />
-
-      <div className="setting-action">
-        <span id="dpi-pending">
-          {staged ? tp(locale, "common.staged", { v: label(status) }) : tp(locale, "common.current", { v: label(deviceStatus) })}
-        </span>
-      </div>
+      {showLiftOff ? (
+        <div className="dpi-card-lift">
+          {slotsAvailable ? <SlotLiftOffPanel snapshot={snapshot} /> : <LiftOffDistance snapshot={snapshot} />}
+        </div>
+      ) : null}
     </article>
   );
 }

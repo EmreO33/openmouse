@@ -9,7 +9,6 @@ import {
   MousePointerClick,
   Plus,
   Settings2,
-  Share2,
   Wifi,
   type LucideIcon,
 } from "lucide-react";
@@ -72,6 +71,22 @@ function TabIcon({ tab }: { tab: WorkspaceTab }): ReactNode {
   return <Icon size={13} strokeWidth={1.8} aria-hidden="true" />;
 }
 
+interface DiagramAnnotation {
+  key: string;
+  side: "left" | "right";
+  label: string;
+  value: string;
+  anchorX: number; // fraction of the artwork width
+  anchorY: number; // fraction of the artwork height
+  chipY: number;   // vertical fraction where the label chip sits
+}
+
+// Leader-line geometry, in artwork fractions. The chip text is inset this far
+// from the box edge and the line's horizontal tick stops just short of it, so
+// no line ever crosses the label text.
+const DIAGRAM_RAIL = { left: 0.09, right: 0.91 };   // vertical trunk column
+const DIAGRAM_TICK = { left: 0, right: 100 };       // tick end at canvas edge
+
 function DeviceShowcase({ snapshot, onRequestArtwork }: {
   snapshot: ControlSnapshot;
   onRequestArtwork: () => void;
@@ -81,6 +96,7 @@ function DeviceShowcase({ snapshot, onRequestArtwork }: {
   const locale = snapshot.preferences.locale;
   const image = snapshot.deviceArtwork;
   const [imageFailed, setImageFailed] = useState(false);
+  const [artSize, setArtSize] = useState<{ w: number; h: number } | null>(null);
 
   const activeDevice = control.getActiveDevice();
   const needsArtwork = activeDevice && (
@@ -90,39 +106,140 @@ function DeviceShowcase({ snapshot, onRequestArtwork }: {
     )
   );
 
+  const annotations: DiagramAnnotation[] = ([
+    {
+      key: "connection",
+      side: "left",
+      label: "Connection",
+      value: status.connectionType ? connectionText(locale, status.connectionType) : "",
+      anchorX: 0.38,
+      anchorY: 0.3,
+      chipY: 0.2,
+    },
+    {
+      key: "dpi",
+      side: "left",
+      label: "DPI",
+      value: status.dpi > 0 ? status.dpi.toLocaleString() : "",
+      anchorX: 0.42,
+      anchorY: 0.52,
+      chipY: 0.5,
+    },
+    {
+      key: "battery",
+      side: "left",
+      label: "Battery",
+      value: status.batteryPercent != null ? `${status.batteryPercent}%` : "",
+      anchorX: 0.36,
+      anchorY: 0.72,
+      chipY: 0.8,
+    },
+    {
+      key: "polling",
+      side: "right",
+      label: "Polling rate",
+      value: status.pollingRateHz ? `${status.pollingRateHz.toLocaleString()} Hz` : "",
+      anchorX: 0.64,
+      anchorY: 0.36,
+      chipY: 0.35,
+    },
+    {
+      key: "profile",
+      side: "right",
+      label: "Profile",
+      value: status.activeProfile != null ? `Profile ${status.activeProfile}` : "",
+      anchorX: 0.66,
+      anchorY: 0.68,
+      chipY: 0.65,
+    },
+  ] as DiagramAnnotation[]).filter((annotation) => annotation.value !== "");
+
+  const leftAnnotations = annotations.filter((annotation) => annotation.side === "left");
+  const rightAnnotations = annotations.filter((annotation) => annotation.side === "right");
+
   return (
     <div className="device-showcase">
       <h1 className="device-showcase-name">{status.name}</h1>
       <p className="device-showcase-brand">{status.brand}</p>
-      <div className="device-showcase-visual">
-        {image ? (
-          <img
-            className="device-showcase-image"
-            src={image}
-            onError={(event) => {
-              event.currentTarget.onerror = null;
-              event.currentTarget.src = deviceImage(null);
-              setImageFailed(true);
-            }}
-            alt={status.name}
-          />
-        ) : null}
-      </div>
-      <div className="device-showcase-status">
-        <span className="device-showcase-dot" aria-hidden="true" />
-        {t(locale, "side.connected")}
-        {status.connectionType ? (
-          <span className="device-showcase-status-detail">
-            {" · "}{connectionText(locale, status.connectionType)}
-          </span>
-        ) : null}
-        {status.batteryPercent !== null ? (
-          <span className="device-showcase-status-detail">
-            {" · "}
-            <BatteryIcon percent={status.batteryPercent} state={status.batteryState} />
-            {status.batteryPercent}%
-          </span>
-        ) : null}
+      <div className="device-diagram">
+        <div className="device-diagram-rail device-diagram-rail--left">
+          {leftAnnotations.map((annotation, index) => (
+            <div
+              key={annotation.key}
+              className="device-diagram-chip device-diagram-chip--left"
+              style={{ top: `${annotation.chipY * 100}%`, animationDelay: `${0.3 + index * 0.06}s` }}
+            >
+              <span className="device-diagram-chip-label">{annotation.label}</span>
+              <span className="device-diagram-chip-value">{annotation.value}</span>
+            </div>
+          ))}
+        </div>
+        <div
+          className="device-diagram-canvas"
+          style={{
+            aspectRatio: artSize ? `${artSize.w} / ${artSize.h}` : "1 / 1",
+            width: artSize ? `min(100%, ${Math.round((artSize.w / artSize.h) * 56)}vh)` : "min(100%, 480px)",
+          }}
+        >
+          <div className="device-diagram-art">
+            {image ? (
+              <img
+                className="device-showcase-image"
+                src={image}
+                onLoad={(event) => {
+                  if (event.currentTarget.naturalWidth > 0) {
+                    setArtSize({ w: event.currentTarget.naturalWidth, h: event.currentTarget.naturalHeight });
+                  }
+                }}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = deviceImage(null);
+                  setImageFailed(true);
+                }}
+                alt={status.name}
+              />
+            ) : null}
+          </div>
+          {annotations.length > 0 ? (
+            <svg className="device-diagram-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {annotations.map((annotation) => {
+                const x = annotation.anchorX * 100;
+                const y = annotation.anchorY * 100;
+                const cy = annotation.chipY * 100;
+                const railX = annotation.side === "left" ? DIAGRAM_RAIL.left * 100 : DIAGRAM_RAIL.right * 100;
+                const tickX = annotation.side === "left" ? DIAGRAM_TICK.left : DIAGRAM_TICK.right;
+                return (
+                  <g key={annotation.key}>
+                    <polyline
+                      points={`${x},${y} ${railX},${y} ${railX},${cy} ${tickX},${cy}`}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+          ) : null}
+          {annotations.map((annotation) => (
+            <span
+              key={`${annotation.key}-dot`}
+              className="device-diagram-dot"
+              style={{ left: `${annotation.anchorX * 100}%`, top: `${annotation.anchorY * 100}%` }}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+        <div className="device-diagram-rail device-diagram-rail--right">
+          {rightAnnotations.map((annotation, index) => (
+            <div
+              key={annotation.key}
+              className="device-diagram-chip device-diagram-chip--right"
+              style={{ top: `${annotation.chipY * 100}%`, animationDelay: `${0.3 + index * 0.06}s` }}
+            >
+              <span className="device-diagram-chip-label">{annotation.label}</span>
+              <span className="device-diagram-chip-value">{annotation.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
       {needsArtwork ? (
         <button
@@ -180,94 +297,6 @@ function DeviceShowcaseSidebar({ snapshot }: { snapshot: ControlSnapshot }): Rea
         ) : null}
       </div>
     </div>
-  );
-}
-
-function DeviceInfoGrid({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
-  const status = snapshot.status;
-  if (!status) return null;
-  const locale = snapshot.preferences.locale;
-
-  const currentRows: Array<{ label: string; value: string; sub?: string }> = [
-    {
-      label: "DPI",
-      value: status.dpi > 0 ? status.dpi.toLocaleString() : "—",
-    },
-    {
-      label: "Polling rate",
-      value: status.pollingRateHz ? `${status.pollingRateHz} Hz` : "—",
-    },
-  ];
-  if (status.activeProfile !== null && status.activeProfile !== undefined) {
-    currentRows.push({
-      label: "Profile",
-      value: status.onboardProfileFormat?.name
-        ? `Profile ${status.activeProfile} (${status.onboardProfileFormat.name})`
-        : status.activeProfile !== null
-          ? `Profile ${status.activeProfile}`
-          : "Default",
-    });
-  }
-  if (status.batteryPercent !== null) {
-    currentRows.push({
-      label: "Battery",
-      value: `${status.batteryPercent}%`,
-      sub: status.batteryState !== "Unknown" ? String(status.batteryState) : undefined,
-    });
-  }
-  if (status.connectionType) {
-    currentRows.push({
-      label: "Connection",
-      value: status.connectionDetail
-        ? `${connectionText(locale, status.connectionType)} (${status.connectionDetail})`
-        : connectionText(locale, status.connectionType),
-    });
-  }
-
-  const infoRows: Array<{ label: string; value: string; mono?: boolean }> = [];
-  infoRows.push({ label: "Manufacturer", value: status.brand });
-  if (status.firmware.length > 0) {
-    infoRows.push({ label: "Firmware", value: status.firmware.join(" · "), mono: status.firmware.length === 1 });
-  }
-  if (status.modelId) infoRows.push({ label: "Model ID", value: status.modelId, mono: true });
-  if (status.unitId) infoRows.push({ label: "Unit ID", value: status.unitId, mono: true });
-  if (status.friendlyName) infoRows.push({ label: "Friendly name", value: status.friendlyName });
-
-  if (currentRows.length === 0 && infoRows.length === 0) return null;
-
-  return (
-    <>
-      {currentRows.length > 0 ? (
-        <div className="info-section">
-          <span className="info-section-title">Current Status</span>
-          <div className="info-grid">
-            {currentRows.map((row) => (
-              <div className="info-row" key={row.label}>
-                <span className="info-label">{row.label}</span>
-                <span className="info-value">
-                  {row.value}
-                  {row.sub ? <span className="info-value-sub"> · {row.sub}</span> : null}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {infoRows.length > 0 ? (
-        <div className="info-section">
-          <span className="info-section-title">Device Information</span>
-          <div className="info-grid">
-            {infoRows.map((row) => (
-              <div className="info-row" key={row.label}>
-                <span className="info-label">{row.label}</span>
-                <span className={`info-value${row.mono ? " info-value-mono" : ""}`}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </>
   );
 }
 
@@ -359,7 +388,6 @@ function OverviewContent({ snapshot, onRequestArtwork }: {
   return (
     <>
       <DeviceShowcase snapshot={snapshot} onRequestArtwork={onRequestArtwork} />
-      <DeviceInfoGrid snapshot={snapshot} />
       {powerOverview && (has.teevolutionDpiLighting || has.sleep) ? (
         <section id="power-overview-settings" className="settings-grid device-data" aria-label="Power settings">
           {has.teevolutionDpiLighting ? <DpiLightingCard snapshot={snapshot} /> : null}
@@ -373,10 +401,12 @@ function OverviewContent({ snapshot, onRequestArtwork }: {
 export function Workspace({
   snapshot,
   onOpenCapture,
+  onShareProfile,
   onRequestArtwork,
 }: {
   snapshot: ControlSnapshot;
   onOpenCapture: () => void;
+  onShareProfile: () => void;
   onRequestArtwork: () => void;
 }): ReactNode {
   const status = snapshot.status;
@@ -392,37 +422,37 @@ export function Workspace({
     show(has.polling, ["performance"]) ? <PollingCard key="polling" snapshot={snapshot} /> : null,
     show(has.sensor, ["performance"]) ? <SensorCard key="sensor" snapshot={snapshot} /> : null,
     show(has.lightforce, ["buttons"]) ? <LightforceCard key="lightforce" snapshot={snapshot} /> : null,
-  ].filter((node) => node !== null);
-
-  const advanced = [
-    show(has.signal, ["advanced"]) ? <SignalCard key="signal" snapshot={snapshot} /> : null,
-    show(has.debounce, ["buttons"]) ? <DebounceCard key="debounce" snapshot={snapshot} /> : null,
-    !powerOverview && show(has.sleep, ["advanced"]) ? <SleepCard key="sleep" snapshot={snapshot} /> : null,
-    show(has.lightingAdvanced, ["advanced"])
-      ? <LightingCard key="lighting" snapshot={snapshot} variant="advanced" /> : null,
     show(has.ninjutsoSensor, ["performance"])
       ? <NinjutsoSensorCard key="ninjutso-sensor" snapshot={snapshot} /> : null,
     show(has.ninjutsoClick, ["performance"])
       ? <NinjutsoClickCard key="ninjutso-click" snapshot={snapshot} /> : null,
-    show(has.lowPower, ["advanced"]) ? <LowPowerCard key="lowpower" snapshot={snapshot} /> : null,
     show(has.processing, ["performance"]) ? <ProcessingCard key="processing" snapshot={snapshot} /> : null,
-    show(has.finalmouse, ["advanced"]) ? <FinalmouseCard key="finalmouse" snapshot={snapshot} /> : null,
-    show(has.incott, ["advanced"]) ? <IncottCard key="incott" snapshot={snapshot} /> : null,
     show(has.eggFilter, ["performance"]) ? <EggFilterCard key="eggfilter" snapshot={snapshot} /> : null,
-    show(has.eggSpdt, ["buttons"]) ? <EggSpdtCard key="eggspdt" snapshot={snapshot} /> : null,
     show(has.eggPolling, ["performance"]) ? <EggPollingCard key="eggpolling" snapshot={snapshot} /> : null,
     show(has.eggCpi, ["performance"]) ? <EggCpiCard key="eggcpi" snapshot={snapshot} /> : null,
+    show(has.powerMode, ["performance"])
+      ? <PowerModeCard key="power-mode" snapshot={snapshot} /> : null,
+    show(has.debounce, ["buttons"]) ? <DebounceCard key="debounce" snapshot={snapshot} /> : null,
+    show(has.eggSpdt, ["buttons"]) ? <EggSpdtCard key="eggspdt" snapshot={snapshot} /> : null,
     show(has.eggButtons, ["buttons"]) ? <EggButtonCard key="eggbuttons" snapshot={snapshot} /> : null,
     show(has.razerButtons, ["buttons"]) ? <RazerButtonCard key="razerbuttons" snapshot={snapshot} /> : null,
     show(has.mxMasterButtons, ["buttons"])
       ? <MxMasterButtonsCard key="mxmaster-buttons" snapshot={snapshot} /> : null,
     show(has.atkButtons, ["buttons"]) ? <AtkButtonCard key="atk-buttons" snapshot={snapshot} /> : null,
-    show(has.atkProfile, ["profiles"]) ? <AtkProfileCard key="atk-profile" snapshot={snapshot} /> : null,
-    show(has.atkReceiver, ["advanced"]) ? <AtkReceiverCard key="atk-receiver" snapshot={snapshot} /> : null,
-    show(has.powerMode, ["performance"])
-      ? <PowerModeCard key="power-mode" snapshot={snapshot} /> : null,
     show(has.buttonMapping && !snapshot.traits.teevolution, ["buttons"])
       ? <ButtonMappingCard key="button-mapping" snapshot={snapshot} /> : null,
+  ].filter((node) => node !== null);
+
+  const advanced = [
+    show(has.signal, ["advanced"]) ? <SignalCard key="signal" snapshot={snapshot} /> : null,
+    !powerOverview && show(has.sleep, ["advanced"]) ? <SleepCard key="sleep" snapshot={snapshot} /> : null,
+    show(has.lightingAdvanced, ["advanced"])
+      ? <LightingCard key="lighting" snapshot={snapshot} variant="advanced" /> : null,
+    show(has.lowPower, ["advanced"]) ? <LowPowerCard key="lowpower" snapshot={snapshot} /> : null,
+    show(has.finalmouse, ["advanced"]) ? <FinalmouseCard key="finalmouse" snapshot={snapshot} /> : null,
+    show(has.incott, ["advanced"]) ? <IncottCard key="incott" snapshot={snapshot} /> : null,
+    show(has.atkProfile, ["profiles"]) ? <AtkProfileCard key="atk-profile" snapshot={snapshot} /> : null,
+    show(has.atkReceiver, ["advanced"]) ? <AtkReceiverCard key="atk-receiver" snapshot={snapshot} /> : null,
     show(has.onboardProfiles && !snapshot.traits.teevolution, ["profiles"])
       ? <OnboardProfileCard key="onboard-profile" snapshot={snapshot} /> : null,
     show(has.pulsarPro, ["profiles"]) ? <PulsarProCard key="pulsarpro" snapshot={snapshot} /> : null,
@@ -471,7 +501,7 @@ export function Workspace({
         </section>
       ) : null}
 
-      {showProfiles ? <Profiles snapshot={snapshot} /> : null}
+      {showProfiles ? <Profiles snapshot={snapshot} onShareProfile={onShareProfile} /> : null}
       {showTeevolutionProfiles ? <TeevolutionProfileCard snapshot={snapshot} /> : null}
       {showNapeLayers ? <KeychronNapeLayers snapshot={snapshot} /> : null}
 
@@ -701,7 +731,7 @@ export function OverviewPage({
               <ArrowLeft size={13} strokeWidth={1.8} aria-hidden="true" />
               {t(locale, "common.back")}
             </button>
-            {tabs.map((tab) => (
+            {(tabs.filter((tab) => tab !== "profiles")).map((tab) => (
               <button
                 key={tab}
                 id={`workspace-tab-${tab}`}
@@ -717,17 +747,24 @@ export function OverviewPage({
                 {t(locale, `tab.${tab}` as I18nKey)}
               </button>
             ))}
-            <button
-              type="button"
-              className="device-tab-back device-tab-back-right"
-              onClick={onShareProfile}
-            >
-              <Share2 size={13} strokeWidth={1.8} aria-hidden="true" />
-              {t(locale, "panel.shareProfile")}
-            </button>
+            {tabs.includes("profiles") ? (
+              <button
+                type="button"
+                role="tab"
+                id="workspace-tab-profiles"
+                className={`device-tab-pill device-tab-profiles-nav${workspaceTab === "profiles" ? " active" : ""}`}
+                aria-selected={workspaceTab === "profiles"}
+                tabIndex={workspaceTab === "profiles" ? 0 : -1}
+                onClick={() => control.setWorkspaceTab("profiles")}
+                onKeyDown={(event) => onTabKey(event, "profiles")}
+              >
+                <TabIcon tab="profiles" />
+                {t(locale, "tab.profiles")}
+              </button>
+            ) : null}
           </nav>
 
-          <Workspace snapshot={workspaceSnapshot} onOpenCapture={onOpenCapture} onRequestArtwork={onRequestArtwork} />
+          <Workspace snapshot={workspaceSnapshot} onOpenCapture={onOpenCapture} onShareProfile={onShareProfile} onRequestArtwork={onRequestArtwork} />
         </>
       ) : (
         <DeviceListView snapshot={snapshot} />
