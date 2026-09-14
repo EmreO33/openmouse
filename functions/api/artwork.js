@@ -228,6 +228,7 @@ async function runVision(env, bytes, format, systemPrompt, userPrompt) {
     ],
     image: dataUrl(bytes, format),
   });
+  console.log("artwork screening: raw AI.run() shape", JSON.stringify(response));
   return response && typeof response === "object" && typeof response.response === "string"
     ? response.response
     : String(response ?? "");
@@ -236,7 +237,6 @@ async function runVision(env, bytes, format, systemPrompt, userPrompt) {
 /** First pass — full scored classification of the image. */
 async function screenImage(env, bytes, format) {
   const raw = await runVision(env, bytes, format, SCREENING_SYSTEM_PROMPT, "Review this image and output the requested JSON only.");
-  console.log("artwork screening: raw model response", raw);
   return parseVerdict(raw);
 }
 
