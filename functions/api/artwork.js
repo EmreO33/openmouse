@@ -228,10 +228,13 @@ async function runVision(env, bytes, format, systemPrompt, userPrompt) {
     ],
     image: dataUrl(bytes, format),
   });
-  console.log("artwork screening: raw AI.run() shape", JSON.stringify(response));
-  return response && typeof response === "object" && typeof response.response === "string"
-    ? response.response
-    : String(response ?? "");
+  // Workers AI sometimes returns `response` as a string (needing our own JSON
+  // extraction below) and sometimes as an already-parsed object when the
+  // model's output happened to be clean JSON — handle both.
+  const inner = response && typeof response === "object" ? response.response : response;
+  if (typeof inner === "string") return inner;
+  if (inner && typeof inner === "object") return JSON.stringify(inner);
+  return String(inner ?? "");
 }
 
 /** First pass — full scored classification of the image. */
