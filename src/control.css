@@ -1899,14 +1899,14 @@ body { height: 100vh; overflow: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
+  border: 1px solid var(--ui-accent);
+  background: var(--ui-accent);
+  color: var(--ui-accent-ink);
   padding: 0.48rem 1.05rem;
   border-radius: 999px;
   font-size: 0.9rem;
   font-weight: 650;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .device-tab-pill svg,
 .device-tab-back svg {
@@ -1915,14 +1915,41 @@ body { height: 100vh; overflow: hidden; }
   stroke-width: 2.2;
 }
 .device-tab-pill:hover {
-  color: var(--bright);
-  border-color: var(--line-strong);
-  background: var(--hover);
+  color: var(--ui-accent-ink);
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 80%, #ffffff);
 }
 .device-tab-pill.active {
-  color: var(--text);
-  background: var(--raised);
-  border-color: var(--line-strong);
+  color: var(--ui-accent-ink);
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-accent-ink) 30%, transparent);
+}
+/* Section tabs (overview/performance/lighting/buttons/advanced) read as white
+   "paper" pills so the accent-filled Back and Profiles CTAs stand out. The
+   fill follows the theme: white across the dark shells (via --bright/--ink),
+   card white on the light shell. */
+.device-tab-pill:not(.device-tab-profiles-nav) {
+  --nav-pill-bg: var(--bright);
+  --nav-pill-ink: var(--ink);
+  background: var(--nav-pill-bg);
+  border-color: var(--nav-pill-bg);
+  color: var(--nav-pill-ink);
+}
+.control-shell[data-interface-theme="light"] .device-tab-pill:not(.device-tab-profiles-nav) {
+  --nav-pill-bg: var(--card);
+  --nav-pill-ink: var(--text);
+}
+.device-tab-pill:not(.device-tab-profiles-nav):hover {
+  background: color-mix(in srgb, var(--nav-pill-bg) 85%, var(--ui-accent));
+  border-color: var(--nav-pill-bg);
+  color: var(--nav-pill-ink);
+}
+.device-tab-pill:not(.device-tab-profiles-nav).active {
+  background: var(--nav-pill-bg);
+  border-color: var(--ui-accent);
+  color: var(--nav-pill-ink);
+  box-shadow: 0 0 0 1.5px var(--ui-accent), 0 8px 22px -6px color-mix(in srgb, var(--ui-accent) 60%, transparent);
 }
 
 /* Device Showcase (large, centered) */
@@ -2534,9 +2561,9 @@ body { height: 100vh; overflow: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
+  border: 1px solid var(--ui-accent);
+  background: var(--ui-accent);
+  color: var(--ui-accent-ink);
   padding: 0.48rem 0.85rem;
   border-radius: 999px;
   font-size: 0.88rem;
@@ -2548,9 +2575,9 @@ body { height: 100vh; overflow: hidden; }
   transform: translateY(-50%);
 }
 .device-tab-back:hover {
-  color: var(--bright);
-  border-color: var(--line-strong);
-  background: var(--hover);
+  color: var(--ui-accent-ink);
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 80%, #ffffff);
 }
 /* The Profiles section lives off the pill row, pinned to the bar's right edge
    where the old share button sat. It keeps the shared pill chrome but reads
@@ -2560,21 +2587,9 @@ body { height: 100vh; overflow: hidden; }
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  border: 1px solid var(--ui-accent);
-  background: var(--ui-accent);
-  color: var(--ui-accent-ink);
 }
 .device-tab-profiles-nav:hover:not(:disabled) {
-  color: var(--ui-accent-ink);
-  border-color: var(--ui-accent);
-  background: color-mix(in srgb, var(--ui-accent) 80%, #ffffff);
   filter: none;
-}
-.device-tab-profiles-nav.active {
-  color: var(--ui-accent-ink);
-  border-color: var(--ui-accent);
-  background: var(--ui-accent);
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-accent-ink) 30%, transparent);
 }
 
 /* Device grid (landing view) — Logitech-G-HUB style tiles */
