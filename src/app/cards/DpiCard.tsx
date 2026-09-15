@@ -17,7 +17,9 @@ type StageRow = { enabled: boolean; value: string; lod: number };
 /**
  * One DPI editor for every device flavor. It always shows up to four rows,
  * each with a tickbox (include the stage in the DPI cycle), a typed value, and
- * a slider. Disabled rows keep their value locally so re-enabling restores it.
+ * a slider. Slot/stage devices instead render one row per advertised stage
+ * (`maxStages`), so the row count matches what the mouse actually accepts.
+ * Disabled rows keep their value locally so re-enabling restores it.
  * Logitech slots additionally carry a lift-off picker.
  */
 function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode {
@@ -33,19 +35,22 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
   const limits = snapshot.profile.slotLimits;
   const locked = isLogitech ? snapshot.profile.slotsLocked : snapshot.settingsPending;
 
+  const countCap = isLogitech ? (limits?.maxStages ?? 1) : stageEditor?.maxStages ?? 1;
+  const rowCap = mode === "generic" ? MAX_EDITOR_ROWS : countCap;
+
   const initRows = (): StageRow[] => {
     if (isLogitech && snapshot.dpiSlotPlan) {
-      const stages = snapshot.dpiSlotPlan.stages.slice(0, MAX_EDITOR_ROWS);
+      const stages = snapshot.dpiSlotPlan.stages.slice(0, rowCap);
       const last = stages[stages.length - 1]?.x ?? status?.dpi ?? 800;
       const rows = stages.map((stage) => ({ enabled: true, value: String(stage.x), lod: stage.lod }));
-      while (rows.length < MAX_EDITOR_ROWS) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
+      while (rows.length < rowCap) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
       return rows;
     }
     if (isStage && status?.dpiStages) {
-      const stages = status.dpiStages.slice(0, MAX_EDITOR_ROWS);
+      const stages = status.dpiStages.slice(0, rowCap);
       const last = stages[stages.length - 1] ?? status.dpi ?? 800;
       const rows = stages.map((value) => ({ enabled: true, value: String(value), lod: DEFAULT_LOD }));
-      while (rows.length < MAX_EDITOR_ROWS) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
+      while (rows.length < rowCap) rows.push({ enabled: false, value: String(last), lod: DEFAULT_LOD });
       return rows;
     }
     const presets = dpiPresetValues(options);
@@ -68,7 +73,6 @@ function DpiStageEditor({ snapshot }: { snapshot: ControlSnapshot }): ReactNode 
     };
   }, []);
 
-  const countCap = isLogitech ? (limits?.maxStages ?? 1) : stageEditor?.maxStages ?? 1;
   const fixedStageCount = isStage && stageEditor?.countEditable !== true;
 
   // Rebuild local rows only when the device source clearly changes while the

@@ -22,32 +22,8 @@
 .setting-scope { display:inline-block;margin-left:.5rem;padding:.14rem .42rem;border:1px solid var(--border);border-radius:999px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;white-space:nowrap }
 .setting-heading h2 .setting-scope { position:relative;top:-.1em }
 
-/* Per-profile DPI slots. Each row is one slot: its number, a single DPI value,
-   and the lift-off level stored alongside it in the same stage record. */
-/* The slot count and its title sit together on the left, so the eye reads the
-   label and the control it belongs to in one movement. The title uses the same
-   overline treatment as the card headings above it. */
-.dpi-slot-header { display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;margin-bottom:.6rem;/*padding-left:.6rem;border-left:2px solid var(--border)*/ }
-.dpi-slot-header > span { color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap }
 /* Divides the slot picker from the table it sizes. */
 .dpi-slot-rule { height:1px;margin:0 0 .55rem;background:var(--border-rule) }
-.dpi-slot-count { display:flex;gap:.22rem }
-.dpi-slot-count button { min-width:1.55rem;padding:.26rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.62rem;cursor:pointer }
-.dpi-slot-count button:hover:not(:disabled) { border-color:var(--ghost);color:var(--text-hover) }
-.dpi-slot-count button.selected { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
-.dpi-slot-count button:disabled { opacity:.5;cursor:not-allowed }
-
-.dpi-slot-list { display:grid;gap:.3rem;overflow:visible }
-/* One shared column template so the headings line up with the fields under
-   them: slot number, DPI, lift-off. */
-.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
-.dpi-slot-head { padding:0 0 .1rem;color:var(--text-faint);font-size:.53rem;letter-spacing:.06em;text-transform:uppercase }
-.dpi-slot-head span { padding-left:.15rem }
-.dpi-slot-row > button.dpi-slot-index { padding:.34rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;cursor:pointer }
-.dpi-slot-row.is-default > button.dpi-slot-index { border-color:var(--ui-accent);background:color-mix(in srgb, var(--ui-accent) 16%, var(--surface-raised));color:var(--ui-accent) }
-.dpi-slot-row input[type="number"] { width:100%;min-width:0;box-sizing:border-box;padding:.34rem .3rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised);color:var(--text-input);font-size:.66rem }
-.dpi-slot-row input[type="number"]:hover:not(:disabled) { border-color:var(--ghost) }
-.dpi-slot-row input[type="number"]:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
 
 /* Lift-off picker. A native select cannot be themed or animated, so it is a
    button plus a listbox that shares the inputs' shape and colours. */
@@ -67,8 +43,6 @@
 @media (prefers-reduced-motion:reduce) {
   .lod-select-value, .lod-select-value i, .lod-select-menu, .lod-select-menu li { transition:none }
 }
-.dpi-slot-row input:disabled, .dpi-slot-row select:disabled { opacity:.55;cursor:not-allowed }
-
 /* Report rate as a slider with one stop per supported rate. */
 .rate-slider { display:grid;gap:.1rem }
 .rate-slider + .rate-slider { margin-top:.65rem }
@@ -208,26 +182,6 @@
   .profile-disclosure-body, .profile-summary-chevron, .profile-summary-main, .icon-button { transition:none }
 }
 
-/* Divides the slot picker from the table it sizes. */
-.dpi-slot-rule { height:1px;margin:0 0 .55rem;background:var(--border-rule) }
-.dpi-slot-count { display:flex;gap:.22rem }
-.dpi-slot-count button { min-width:1.55rem;padding:.26rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.62rem;cursor:pointer }
-.dpi-slot-count button:hover:not(:disabled) { border-color:var(--ghost);color:var(--text-hover) }
-.dpi-slot-count button.selected { border-color:var(--ui-accent);background:var(--ui-accent);color:var(--ui-accent-ink) }
-.dpi-slot-count button:disabled { opacity:.5;cursor:not-allowed }
-
-.dpi-slot-list { display:grid;gap:.3rem;overflow:visible }
-/* One shared column template so the headings line up with the fields under
-   them: slot number, DPI, lift-off. */
-.dpi-slot-row { display:grid;grid-template-columns:1.7rem minmax(0,1fr) 4.6rem;gap:.3rem;align-items:center }
-.dpi-slot-head { padding:0 0 .1rem;color:var(--text-faint);font-size:.53rem;letter-spacing:.06em;text-transform:uppercase }
-.dpi-slot-head span { padding-left:.15rem }
-.dpi-slot-row > button.dpi-slot-index { padding:.34rem 0;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--text-soft);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;cursor:pointer }
-.dpi-slot-row.is-default > button.dpi-slot-index { border-color:var(--ui-accent);background:color-mix(in srgb, var(--ui-accent) 16%, var(--surface-raised));color:var(--ui-accent) }
-.dpi-slot-row input[type="number"] { width:100%;min-width:0;box-sizing:border-box;padding:.34rem .3rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised);color:var(--text-input);font-size:.66rem }
-.dpi-slot-row input[type="number"]:hover:not(:disabled) { border-color:var(--ghost) }
-.dpi-slot-row input[type="number"]:focus-visible { outline:2px solid var(--ui-accent);outline-offset:1px }
-
 /* Lift-off picker. A native select cannot be themed or animated, so it is a
    button plus a listbox that shares the inputs' shape and colours. */
 .lod-select { position:relative;min-width:0 }
@@ -246,8 +200,6 @@
 @media (prefers-reduced-motion:reduce) {
   .lod-select-value, .lod-select-value i, .lod-select-menu, .lod-select-menu li { transition:none }
 }
-.dpi-slot-row input:disabled, .dpi-slot-row select:disabled { opacity:.55;cursor:not-allowed }
-
 /* Report rate as a slider with one stop per supported rate. */
 .rate-slider { display:grid;gap:.1rem }
 .rate-slider + .rate-slider { margin-top:.65rem }
@@ -266,20 +218,9 @@
 .control-shell .settings-grid.has-dpi-slots { grid-template-rows:minmax(176px,auto) }
 .control-shell .settings-grid.has-dpi-slots .dpi-card { grid-row:auto }
 
-/* Compx/Keychron simple stages reuse the slot row chrome with a 2-column grid. */
-#dpi-stages { margin-top: .65rem; }
-.dpi-stage-list .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) }
-.dpi-stage-list .dpi-slot-head { grid-template-columns:1.7rem minmax(0,1fr) }
-.dpi-stage-list.has-colors .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) 3rem }
-.dpi-stage-list input[type="color"] { width:100%;height:1.8rem;padding:.15rem;border:1px solid var(--border);border-radius:7px;background:var(--surface-raised) }
-@media (max-width:640px) {
-  .dpi-stage-list .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) }
-  .dpi-stage-list.has-colors .dpi-slot-row { grid-template-columns:1.7rem minmax(0,1fr) 3rem }
-}
-
-/* Unified DPI stage editor: every device shows up to four rows with a tick,
-   a slot number, a typed value and a slider. Row chrome mirrors the slot rows
-   above; disabled-by-untick rows dim but keep their value locally. */
+/* Unified DPI stage editor: tick a row to include it in the cycle, edit its
+   value or drag the slider, and click the number to make it active. Unticked
+   rows dim but keep their value locally, so re-enabling restores it. */
 #dpi-stage-editor { margin-top:.65rem }
 .dpi-editor-list { display:grid;gap:.35rem }
 .dpi-editor-bar { display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;padding:0 0 .15rem }
