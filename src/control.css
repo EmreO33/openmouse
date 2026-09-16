@@ -930,6 +930,18 @@ nav { display: grid; gap: .3rem; margin-top: 1.4rem; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .2rem 0; color: var(--dim); font-size: .75rem; }
 .field-label { display: block; color: var(--faint); font-size: .72rem; }
 .field-label.spaced { margin-top: .35rem; }
+.angle-tuning-readonly { display: flex; align-items: center; justify-content: space-between; }
+.angle-tuning-readonly output { color: var(--text-input); font-family: var(--font-mono); }
+.angle-tuning-control { margin-top: .55rem; padding-top: .55rem; border-top: 1px solid var(--line); }
+.angle-tuning-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; color: var(--dim); font-size: .7rem; }
+.angle-tuning-head output { min-width: 2.8rem; color: var(--text-input); font: 650 .72rem var(--font-mono); text-align: right; }
+.angle-tuning-inputs { display: grid; grid-template-columns: 1.65rem minmax(7rem, 1fr) 1.65rem; align-items: center; gap: .5rem; margin-top: .35rem; }
+.angle-tuning-inputs button { width: 1.65rem; height: 1.65rem; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-strong); color: var(--text-input); font-size: .9rem; line-height: 1; cursor: pointer; }
+.angle-tuning-inputs button:hover:not(:disabled) { border-color: var(--ui-accent); color: var(--ui-accent); }
+.angle-tuning-inputs button:disabled { opacity: .35; }
+.angle-tuning-inputs input[type="range"] { width: 100%; margin: 0; accent-color: var(--ui-accent); cursor: pointer; }
+.angle-tuning-scale { display: flex; justify-content: space-between; margin: .12rem 2.15rem 0; color: var(--ghost); font: .48rem var(--font-mono); }
+.angle-tuning-scale i { font-style: normal; }
 .teevolution-dpi-light-controls { margin-top: .55rem; }
 
 .egg-collapsible, .egg-experimental { overflow: hidden; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--card); }

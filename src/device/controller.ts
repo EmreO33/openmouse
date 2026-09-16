@@ -1743,6 +1743,10 @@ async function activateClientNow(client: SupportedClient): Promise<void> {
       lastSleepSeconds = status.sleepTimeout ?? keychron.getSleepOptions()[0] ?? 60;
     }
     deviceStatuses.set(client.device, status);
+    // Optional setters/getters are runtime capabilities of the selected
+    // client. Populate them before rendering so controls such as RAWM angle
+    // tuning are editable on the first status snapshot.
+    capabilities = readCapabilities();
     applyStatus(status);
     await readButtons();
     await loadNapeKeymap(status.napeLayer ?? editedNapeLayer ?? 1);
