@@ -3552,3 +3552,56 @@ body { height: 100vh; overflow: hidden; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Self-XSS guard (src/self-xss-guard.ts). Shown only in production builds while
+   developer tools appear to be open; the copy steers the user away from pasting
+   unfamiliar code. */
+#selfxss-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgb(8 9 10 / 88%);
+  backdrop-filter: blur(4px);
+}
+.selfxss-panel {
+  max-width: 34rem;
+  padding: 1.75rem 1.9rem;
+  border: 1px solid var(--destructive);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 55%);
+  text-align: center;
+}
+.selfxss-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--destructive);
+}
+.selfxss-panel p {
+  margin: 0 0 1rem;
+  color: var(--dim);
+  line-height: 1.6;
+}
+.selfxss-hint {
+  font-weight: 600;
+  color: var(--text);
+}
+.selfxss-dismiss {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+.selfxss-dismiss:hover {
+  background: var(--hover);
+  color: var(--text);
+}

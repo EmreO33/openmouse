@@ -20,6 +20,7 @@
 // cleared strike bucket can't clear a permanent ban.
 
 import { isAdminUnbanRequest } from "./_lib/admin.js";
+import { hardenResponse } from "./_lib/security-headers.js";
 
 const DISCORD_TICKET_URL = "https://discordapp.com/channels/1531814042421952644/1545272715072639117";
 
@@ -37,13 +38,18 @@ const BAN_REASONS = {
 // page on any navigation.
 const banPage = (reasonToken) => {
   const reason = BAN_REASONS[reasonToken] ?? BAN_REASONS.default;
+  // The inline stylesheet needs a nonce because the canonical CSP has no
+  // 'unsafe-inline'. The ban page is a Function response, so it declares its
+  // own locked-down policy (no scripts, no external resources) instead of the
+  // site-wide one applied by hardenResponse.
+  const nonce = crypto.randomUUID().replace(/-/g, "");
   const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>You have been banned</title>
-<style>
+<style nonce="${nonce}">
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
     background: #230707; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -68,7 +74,11 @@ const banPage = (reasonToken) => {
 </html>`;
   return new Response(html, {
     status: 403,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Security-Policy": `default-src 'none'; style-src 'nonce-${nonce}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+    },
   });
 };
 
@@ -131,7 +141,11 @@ async function enforceRateLimit(kv, request, ip) {
   return count > cap;
 }
 
-export async function onRequest({ request, env, next }) {
+export async function onRequest(context) {
+  return hardenResponse(await handle(context));
+}
+
+async function handle({ request, env, next }) {
   const kv = env.SECURITY_KV;
   if (!kv) return next();
 
