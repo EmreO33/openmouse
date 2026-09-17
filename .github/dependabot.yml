@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 1
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: "@openmouse/protocol"
+    versioning-strategy: increase
+    commit-message:
+      prefix: "chore(protocol)"
