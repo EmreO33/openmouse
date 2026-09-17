@@ -118,6 +118,7 @@ function vendorIdsFor(filters: HIDDeviceFilter[]): number[] {
 // TauriHidDevice, Bridge's native-hid) landed on the same shape.
 class BridgeHidDevice implements HIDDevice {
   readonly key: string;
+  readonly openMouseTransport = "bridge";
   readonly vendorId: number;
   readonly productId: number;
   readonly productName: string;

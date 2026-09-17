@@ -43,6 +43,7 @@ test("drives a device end to end over the socket", async () => {
 
   const [device] = await listing;
   assert.equal(device.productName, "Pulsar X2");
+  assert.equal((device as HIDDevice & { openMouseTransport?: string }).openMouseTransport, "bridge");
   assert.equal(device.collections[0].inputReports[0].reportId, 8);
   assert.equal(device.opened, false);
 
