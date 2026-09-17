@@ -36,8 +36,6 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [discordUsername, setDiscordUsername] = useState("");
-  const [discordError, setDiscordError] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -99,8 +97,6 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
     if (!open) return;
     setFile(null);
     setFileError(null);
-    setDiscordUsername("");
-    setDiscordError(false);
     setNote("");
     setError(false);
     setRejectReason(null);
@@ -133,15 +129,9 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
   }
 
   async function send(): Promise<void> {
-    const trimmedDiscord = discordUsername.trim();
-    if (!trimmedDiscord) {
-      setDiscordError(true);
-      return;
-    }
     if (!file || busy || lockedMinutes !== null) return;
     setBusy(true);
     setError(false);
-    setDiscordError(false);
     setRejectReason(null);
     try {
       const ext = file.type === "image/png" ? "png" : "webp";
@@ -159,10 +149,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
               title: "Artwork Request",
               color: 0x5dde89,
               description: note.trim().slice(0, MAX_NOTE_LENGTH) || "No note provided.",
-              fields: [
-                { name: "Device", value: `**${deviceName}**`, inline: false },
-                { name: "Discord", value: trimmedDiscord, inline: false },
-              ],
+              fields: [{ name: "Device", value: `**${deviceName}**`, inline: false }],
               attachments: [{ id: "0", description: `Artwork request for ${deviceName}`, filename }],
             },
           ],
@@ -218,23 +205,6 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
           <span>{t(locale, "artreq.deviceLabel")}</span>
           <strong>{deviceName || "—"}</strong>
         </div>
-
-        <label className="feedback-handle" htmlFor="artreq-discord">
-          <span>{t(locale, "artreq.discordLabel")}</span>
-          <input
-            id="artreq-discord"
-            type="text"
-            required
-            placeholder={t(locale, "artreq.discordPlaceholder")}
-            value={discordUsername}
-            onChange={(event) => { setDiscordUsername(event.currentTarget.value); setDiscordError(false); }}
-          />
-        </label>
-        {discordError ? (
-          <p className="feedback-error" role="alert">
-            {t(locale, "artreq.discordRequired")}
-          </p>
-        ) : null}
 
         <div
           className={`artreq-dropzone${file ? " has-file" : ""}`}
@@ -308,7 +278,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
 
         <div className="feedback-actions">
           <button type="button" onClick={onClose}>{t(locale, "common.cancel")}</button>
-          <button type="submit" className="is-primary" disabled={!file || !discordUsername.trim() || busy || lockedMinutes !== null}>
+          <button type="submit" className="is-primary" disabled={!file || busy || lockedMinutes !== null}>
             {busy ? "…" : t(locale, "artreq.send")}
           </button>
         </div>
