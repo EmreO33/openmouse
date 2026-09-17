@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as control from "../device/controller";
-import { t, type I18nKey } from "../i18n";
+import { t, tp, type I18nKey } from "../i18n";
 import type { InterfaceLocale } from "../interface-preferences";
 
 const MAX_ART_SIZE = 5 * 1024 * 1024;
 const MAX_NOTE_LENGTH = 600;
 const ACCEPTED_TYPES = ["image/png", "image/webp"] as const;
 const ARTWORK_URL = "/api/artwork";
+const FAILURE_KEY = "openmouse.artreq.failures";
+const MAX_FAILURES = 3;
+const LOCK_MS = 30 * 60 * 1000;
+const DISCORD_TICKET_URL = "https://discordapp.com/channels/1531814042421952644/1545272715072639117";
 
 /** Server-side screening reasons (see functions/api/artwork.js) mapped to
     localized messages. Anything unknown falls back to artreq.rejected. */
@@ -14,7 +18,11 @@ const REJECT_KEYS: Record<string, I18nKey> = {
   nsfw: "artreq.rejectedNsfw",
   hate: "artreq.rejectedHate",
   gore: "artreq.rejectedGore",
-  junk: "artreq.rejectedJunk",
+  notArtwork: "artreq.rejectedNotArtwork",
+  photo: "artreq.rejectedPhoto",
+  background: "artreq.rejectedBackground",
+  unconfirmed: "artreq.rejectedUnconfirmed",
+  unscreened: "artreq.rejectedUnscreened",
   invalid: "artreq.rejectedInvalid",
 };
 
@@ -35,6 +43,44 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
   const [error, setError] = useState(false);
   const [rejectReason, setRejectReason] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [lockedMinutes, setLockedMinutes] = useState<number | null>(null);
+
+  function readFailures(): { count: number; lastAt: number } {
+    try {
+      const raw = localStorage.getItem(FAILURE_KEY);
+      const data: unknown = raw ? JSON.parse(raw) : null;
+      if (
+        data &&
+        typeof data === "object" &&
+        typeof (data as { count?: unknown }).count === "number" &&
+        typeof (data as { lastAt?: unknown }).lastAt === "number"
+      ) {
+        return { count: (data as { count: number }).count, lastAt: (data as { lastAt: number }).lastAt };
+      }
+    } catch {
+      /* corrupted state falls back to zero failures */
+    }
+    return { count: 0, lastAt: 0 };
+  }
+
+  function evaluateLock(): void {
+    const { count, lastAt } = readFailures();
+    if (count >= MAX_FAILURES) {
+      const remainingMs = lastAt + LOCK_MS - Date.now();
+      if (remainingMs > 0) {
+        setLockedMinutes(Math.ceil(remainingMs / 60000));
+        return;
+      }
+      localStorage.removeItem(FAILURE_KEY);
+    }
+    setLockedMinutes(null);
+  }
+
+  function recordFailure(): void {
+    const { count } = readFailures();
+    localStorage.setItem(FAILURE_KEY, JSON.stringify({ count: count + 1, lastAt: Date.now() }));
+    evaluateLock();
+  }
 
   useEffect(() => {
     const element = dialog.current;
@@ -58,6 +104,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
     setNote("");
     setError(false);
     setRejectReason(null);
+    evaluateLock();
   }, [open]);
 
   useEffect(() => {
@@ -91,7 +138,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
       setDiscordError(true);
       return;
     }
-    if (!file || busy) return;
+    if (!file || busy || lockedMinutes !== null) return;
     setBusy(true);
     setError(false);
     setDiscordError(false);
@@ -123,13 +170,15 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
       );
       form.append("files[0]", file, filename);
       const response = await fetch(ARTWORK_URL, { method: "POST", body: form });
-      if (response.status === 422) {
+      if (response.status === 422 || response.status === 503) {
         const body: unknown = await response.json().catch(() => null);
         const reason =
           body && typeof body === "object" && "reason" in body
             ? (body as { reason?: unknown }).reason
             : null;
-        setRejectReason(typeof reason === "string" && REJECT_KEYS[reason] ? reason : "invalid");
+        const key = typeof reason === "string" && REJECT_KEYS[reason] ? reason : "invalid";
+        setRejectReason(key);
+        if (key !== "unscreened" && key !== "invalid") recordFailure();
         return;
       }
       if (!response.ok) throw new Error(String(response.status));
@@ -236,7 +285,18 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
           />
         </label>
 
-        {rejectReason ? (
+        {lockedMinutes !== null ? (
+          <div className="artreq-locked" role="alert">
+            <p>
+              {t(locale, "artreq.lockedTitle")} {tp(locale, "artreq.lockedBody", { minutes: lockedMinutes })}
+            </p>
+            <p className="artreq-locked-link">
+              <a href={DISCORD_TICKET_URL} target="_blank" rel="noreferrer">
+                {t(locale, "artreq.lockedDiscord")} ↗
+              </a>
+            </p>
+          </div>
+        ) : rejectReason ? (
           <p className="feedback-error" role="alert">
             {t(locale, REJECT_KEYS[rejectReason] ?? "artreq.rejected")}
           </p>
@@ -248,7 +308,7 @@ export function ArtworkRequestDialog({ open, onClose, locale = "en", deviceName 
 
         <div className="feedback-actions">
           <button type="button" onClick={onClose}>{t(locale, "common.cancel")}</button>
-          <button type="submit" className="is-primary" disabled={!file || !discordUsername.trim() || busy}>
+          <button type="submit" className="is-primary" disabled={!file || !discordUsername.trim() || busy || lockedMinutes !== null}>
             {busy ? "…" : t(locale, "artreq.send")}
           </button>
         </div>

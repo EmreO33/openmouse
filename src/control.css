@@ -748,6 +748,10 @@ nav { display: grid; gap: .3rem; margin-top: 1.4rem; }
 .artreq-drop-empty { max-width: 20rem; }
 .artreq-preview { width: 7rem; height: 7rem; object-fit: contain; }
 .artreq-hint { margin: 0; color: var(--faint); font-size: .75rem; }
+.artreq-locked p { margin: 0; }
+.artreq-locked-link { margin-top: .4rem; }
+.artreq-locked-link a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.artreq-locked-link a:hover { text-decoration: underline; }
 .artreq-note { width: 100%; box-sizing: border-box; min-height: 4rem; padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-input); color: var(--text-input); font-family: var(--font-sans); font-size: .85rem; line-height: 1.5; resize: vertical; color-scheme: dark; }
 .artreq-note:focus { outline: none; border-color: var(--accent); }
 .support-diagnostics { display: grid; gap: .7rem; padding-top: .2rem; }
