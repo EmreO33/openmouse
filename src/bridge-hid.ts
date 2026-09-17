@@ -56,6 +56,8 @@ type Command =
   | { type: "list"; vendorIds: number[] }
   | { type: "open"; device: string }
   | { type: "close"; device: string }
+  | { type: "listen"; device: string }
+  | { type: "unlisten"; device: string }
   | { type: "sendReport"; device: string; reportId: number; data: number[] }
   | { type: "sendFeatureReport"; device: string; reportId: number; data: number[] }
   | { type: "receiveFeatureReport"; device: string; reportId: number };
@@ -161,12 +163,17 @@ class BridgeHidDevice implements HIDDevice {
 
   addEventListener(type: "inputreport", listener: (event: HIDInputReportEvent) => void): void {
     if (type !== "inputreport") return;
+    const first = this.#listeners.size === 0;
     this.#listeners.add(listener);
+    if (first) void this.#client.request({ type: "listen", device: this.key }).catch(() => undefined);
   }
 
   removeEventListener(type: "inputreport", listener: (event: HIDInputReportEvent) => void): void {
     if (type !== "inputreport") return;
     this.#listeners.delete(listener);
+    if (this.#listeners.size === 0) {
+      void this.#client.request({ type: "unlisten", device: this.key }).catch(() => undefined);
+    }
   }
 
   /** Called by the client when Bridge forwards a report for this device. */
