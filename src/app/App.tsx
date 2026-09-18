@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import * as control from "../device/controller";
+import { bridgeHandshake, bridgeStatus as loadBridgeStatus, type BridgeStatus } from "../bridge";
 import { ensureLocale } from "../i18n";
 import { interfaceThemeSlug } from "../interface-preferences";
 import { AppSidebar, type DesktopPage } from "./AppSidebar";
+import { BridgeSettings } from "./BridgeSettings";
 import { ArtworkRequestDialog } from "./ArtworkRequestDialog";
 import { OverviewPage } from "./OverviewPage";
 import { CaptureDialog } from "./CaptureDialog";
@@ -29,18 +31,26 @@ export function App(): ReactNode {
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [page, setPage] = useState<DesktopPage>("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
   const { preferences, status } = snapshot;
   const locale = preferences.locale;
+
+  const refreshBridge = useCallback(async (): Promise<void> => {
+    await bridgeHandshake();
+    setBridgeStatus(await loadBridgeStatus());
+  }, []);
 
   const showingSettings = page === "settings" || snapshot.interfaceSettingsOpen;
 
   const resolvedPage: DesktopPage = showingSettings
     ? "settings"
-    : page === "test"
-      ? "test"
-      : status !== null && snapshot.deviceView === "device"
-        ? "dashboard"
-        : "home";
+    : page === "bridge" && bridgeStatus !== null
+      ? "bridge"
+      : page === "test"
+        ? "test"
+        : status !== null && snapshot.deviceView === "device"
+          ? "dashboard"
+          : "home";
 
   useEffect(() => {
     try {
@@ -67,6 +77,29 @@ export function App(): ReactNode {
     // re-render once it arrives instead of sticking on fallback strings.
     if (locale !== "en") void ensureLocale(locale).then(() => control.refreshInterface());
   }, [locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async (): Promise<void> => {
+      try {
+        await bridgeHandshake();
+        const next = await loadBridgeStatus();
+        if (!cancelled) setBridgeStatus(next);
+      } catch {
+        if (!cancelled) setBridgeStatus(null);
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 10_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (page === "bridge" && bridgeStatus === null) setPage("home");
+  }, [bridgeStatus, page]);
 
   useEffect(() => {
     panel.current?.scrollTo({ top: 0, behavior: preferences.reducedMotion ? "auto" : "smooth" });
@@ -98,6 +131,9 @@ export function App(): ReactNode {
     } else if (next === "test") {
       control.showDeviceList();
       setPage("test");
+    } else if (next === "bridge" && bridgeStatus !== null) {
+      control.showDeviceList();
+      setPage("bridge");
     } else {
       control.showDeviceList();
       setPage("home");
@@ -117,12 +153,19 @@ export function App(): ReactNode {
       data-interface-theme={interfaceThemeSlug(preferences.theme)}
     >
       <NewsBanner locale={locale} />
-      <AppSidebar snapshot={snapshot} page={resolvedPage} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
+      <AppSidebar snapshot={snapshot} page={resolvedPage} collapsed={sidebarCollapsed} bridgeDetected={bridgeStatus !== null} onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)} onNavigate={navigate} onOpenFeedback={() => setFeedbackOpen(true)} onOpenWhatsNew={() => setWhatsNewOpen(true)} />
 
       <main className="full-desktop-main">
         <div className="full-desktop-content" ref={panel}>
           {showingSettings ? (
             <InterfaceSettings snapshot={snapshot} />
+          ) : page === "bridge" && bridgeStatus !== null ? (
+            <BridgeSettings
+              status={bridgeStatus}
+              locale={locale}
+              onRefresh={refreshBridge}
+              onStatusChange={setBridgeStatus}
+            />
           ) : page === "test" ? (
             <MouseTestPage snapshot={snapshot} />
           ) : (

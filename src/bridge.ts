@@ -80,6 +80,22 @@ export async function saveBridgeDefaultProfile(profile: BridgeProfile): Promise<
   });
 }
 
+export async function saveBridgeAutostart(enabled: boolean): Promise<void> {
+  await bridgeRequest("/v1/autostart", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function saveBridgeBatteryThreshold(percent: number): Promise<void> {
+  await bridgeRequest("/v1/battery-threshold", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ percent }),
+  });
+}
+
 export interface BridgeBatteryReading {
   deviceId: string;
   deviceName: string;
