@@ -269,7 +269,9 @@ class BridgeClient {
     const id = this.#nextId++;
     const started = performance.now();
     const device = "device" in command ? command.device : undefined;
-    bridgeLog("debug", "request sent", { detail: { id, command: command.type, device } });
+    if (command.type !== "list") {
+      bridgeLog("debug", "request sent", { detail: { id, command: command.type, device } });
+    }
     return new Promise<Reply>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.#pending.delete(id);
@@ -364,10 +366,12 @@ class BridgeClient {
         const signature = JSON.stringify(devices);
         const inventoryChanged = signature !== this.#lastScanSignature;
         this.#lastScanSignature = signature;
-        bridgeLog(inventoryChanged ? "info" : "debug", "device scan completed", {
-          detail: { ...detail, devices },
-          transient: true,
-        });
+        if (inventoryChanged) {
+          bridgeLog("info", "device scan completed", {
+            detail: { ...detail, devices },
+            transient: true,
+          });
+        }
       } else {
         bridgeLog("debug", "request completed", { detail });
       }
