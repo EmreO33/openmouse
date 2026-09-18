@@ -283,6 +283,7 @@ class BridgeClient {
 class BridgeHid implements HID {
   #client: BridgeClient;
   #poll: ReturnType<typeof setInterval> | null = null;
+  #listing: Promise<HIDDevice[]> | null = null;
   #listeners: Record<"connect" | "disconnect", Set<(event: HIDConnectionEvent) => void>> = {
     connect: new Set(),
     disconnect: new Set(),
@@ -308,6 +309,17 @@ class BridgeHid implements HID {
    * with no picker to click through.
    */
   async getDevices(): Promise<HIDDevice[]> {
+    if (this.#listing) return this.#listing;
+    const listing = this.#listDevices();
+    this.#listing = listing;
+    try {
+      return await listing;
+    } finally {
+      if (this.#listing === listing) this.#listing = null;
+    }
+  }
+
+  async #listDevices(): Promise<HIDDevice[]> {
     const reply = await this.#client.request({ type: "list", vendorIds: vendorIdsFor(SUPPORTED_HID_FILTERS) });
     const { devices, added, removed } = this.#client.reconcile(reply.devices ?? []);
     for (const device of added) this.#emit("connect", device);

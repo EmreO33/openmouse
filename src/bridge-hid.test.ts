@@ -93,6 +93,22 @@ test("a rejected request surfaces the reason Bridge gave", async () => {
   fake.transport.onClose?.();
 });
 
+test("concurrent scans share one native enumeration request", async () => {
+  const fake = fakeTransport();
+  const hid = bridgeHid(fake.transport);
+
+  const first = hid.getDevices();
+  const second = hid.getDevices();
+  assert.equal(fake.sent.length, 1);
+  assert.equal(fake.sent[0].type, "list");
+  fake.reply({ id: fake.sent[0].id, ok: true, devices: [MOUSE] });
+
+  const [firstDevice] = await first;
+  const [secondDevice] = await second;
+  assert.equal(firstDevice, secondDevice);
+  fake.transport.onClose?.();
+});
+
 test("re-enumeration keeps device identity and reports hot-plug both ways", async () => {
   const fake = fakeTransport();
   const hid = bridgeHid(fake.transport);
