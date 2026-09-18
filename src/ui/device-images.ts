@@ -79,6 +79,7 @@ function resolveDeviceImageFilename(_device: HIDDevice | null | undefined, displ
   if (/\bmx\s*anywhere\s*3\b/i.test(displayName)) return "logitech-mx-anywhere-3.png";
   if (/\bmx\s*ergo\b/i.test(displayName)) return "logitech-mx-ergo-s.png";
   if (/\bdeathadder\s*v4\b/i.test(displayName)) return "razer-deathadder-v4-pro.png";
+  if (/\bdeathadder\s*v3\s*hyperspeed\b/i.test(displayName)) return "razer-deathadder-v3-hyperspeed.png";
   if (/\bdeathadder\s*v3\b(?!\s*pro\b)/i.test(displayName)) return "razer-deathadder-v3.png";
   if (/\bdeathadder\s*v2\b(?!\s*x\s*hyperspeed\b)/i.test(displayName)) return "razer-deathadder-v2.png";
   if (/\bdeathadder\s*essential\b/i.test(displayName)) return "razer-deathadder-v2.png";

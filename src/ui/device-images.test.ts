@@ -146,8 +146,12 @@ test("DeathAdder V2 family shares the V2 render; V4 Pro gets its own", () => {
   assert.equal(deviceImage(null, "DeathAdder V2 X HyperSpeed"), CDN + "unknown-device.png");
 });
 
-test("DeathAdder V3 wired resolves by name", () => {
+test("DeathAdder V3 wired and HyperSpeed resolve to their own renders", () => {
   assert.equal(deviceImage(null, "DeathAdder V3"), CDN + "razer-deathadder-v3.png");
+  assert.equal(
+    deviceImage(null, "Razer DeathAdder V3 HyperSpeed"),
+    CDN + "razer-deathadder-v3-hyperspeed.png",
+  );
 });
 
 test("Viper family resolves each generation to its own render", () => {
